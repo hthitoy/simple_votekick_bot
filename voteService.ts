@@ -309,7 +309,14 @@ export class VoteService {
 
       const inserted = await this.recordsRepo.createRecord(voteId, chatId, voterId, choice, power);
       if (!inserted) {
-        await this.tg.answerCallbackQuery(cb.id, '❌ 已投票');
+        const vote = await this.votesRepo.getVote(voteId);
+        if (vote) {
+          const now = Math.floor(Date.now() / 1000);
+          const remaining = vote.expires_at - now;
+          await this.tg.answerCallbackQuery(cb.id, `❌ 已投票，剩余 ${remaining} 秒`);
+        } else {
+          await this.tg.answerCallbackQuery(cb.id, '❌ 你已投票');
+        }
         return;
       }
 
@@ -362,7 +369,7 @@ export class VoteService {
         } catch {}
       }
 
-      const userMessageIds = [updated.initiator_message_id, updated.target_message_id];
+      const userMessageIds = [updated.initiator_message_id];
       for (const msgId of userMessageIds) {
         if (!msgId) continue;
         try {
