@@ -1,0 +1,146 @@
+// src/renderService.ts
+import { DbVote } from './types';
+
+export class RenderService {
+
+  renderVoteMessage(vote: DbVote): string {
+    const target = this.escape(
+      vote.target_username
+        ? `@${vote.target_username}`
+        : vote.target_first_name ?? `User ${vote.target_user_id}`
+    );
+
+    const net = vote.yes_weight - vote.no_weight;
+    const bar = this.buildNetBar(net, vote.threshold);
+
+    const quoted = vote.quoted_text
+      ? ` "${this.escape(vote.quoted_text.slice(0, 100))}"`
+      : '';
+
+    const startTime = this.formatTime(vote.created_at);
+    const durationMin = Math.round((vote.expires_at - vote.created_at) / 60);
+
+    return (
+`🗳 VoteKick ${target}${quoted}
+
+📊 投票倾向：${bar}
+⬆️ ${vote.yes_weight.toFixed(1)}  ⬇️ ${vote.no_weight.toFixed(1)}  ⚖️ ${net >= 0 ? '+' : ''}${net.toFixed(1)}
+
+🎯 阈值：${vote.threshold}  ⏱ 发起：${startTime}  ⏳ 有效：${durationMin}分钟`
+    );
+  }
+
+  /**
+   * 单轴净值进度条（避免 yes/no 假满问题）
+   */
+  private buildNetBar(net: number, threshold: number): string {
+    const SIZE = 10;
+
+    const ratio = Math.max(-1, Math.min(1, net / threshold));
+
+    const filled = Math.round(Math.abs(ratio) * SIZE);
+    const empty = SIZE - filled;
+
+    if (ratio > 0) {
+      return '🟩'.repeat(filled) + '⬜'.repeat(empty);
+    } else if (ratio < 0) {
+      return '🟥'.repeat(filled) + '⬜'.repeat(empty);
+    } else {
+      return '⬜'.repeat(SIZE);
+    }
+  }
+
+  formatTime(timestamp: number): string {
+    const d = new Date(timestamp * 1000);
+    return d.toTimeString().slice(0, 5); // HH:mm
+  }
+
+  buildVoteKeyboard(voteId: string) {
+    return {
+      inline_keyboard: [
+        [
+          { text: '⬆️ 踢出', callback_data: `vote:${voteId}:yes` },
+          { text: '⬇️ 不踢出', callback_data: `vote:${voteId}:no` },
+        ]
+      ]
+    };
+  }
+
+  renderResultMessage(vote: DbVote): string {
+    const target = vote.target_username
+      ? `@${vote.target_username}`
+      : vote.target_first_name ?? `User ${vote.target_user_id}`;
+
+    const result =
+      vote.status === 'passed'
+        ? `✅ 通过：${target} 已被踢出`
+        : vote.status === 'rejected'
+        ? `❌ 未通过：${target} 保留`
+        : `⏰ 结束：${target} 保留`;
+
+    return (
+`🗳 VoteKick 已结束
+
+${result}
+
+⬆️ ${vote.yes_weight.toFixed(1)}  ⬇️ ${vote.no_weight.toFixed(1)}
+🎯 阈值：${vote.threshold}`
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 验证相关的渲染方法
+  // ════════════════════════════════════════════════════════════════════════
+
+  renderVerificationPrompt(): string {
+    return (
+`🤖 <b>欢迎！请在一分钟内点击下方按钮确认你是人类：</b>`
+    );
+  }
+
+  buildVerificationKeyboard(verificationId: string) {
+    return {
+      inline_keyboard: [
+        [
+          { text: '✅ I am not robot', callback_data: `verify:${verificationId}` }
+        ]
+      ]
+    };
+  }
+
+  renderVerificationSuccess(): string {
+    return `✅ <b>验证成功！</b>\n\n欢迎加入群组。禁言已解除。`;
+  }
+
+  renderStartGuide(): string {
+    return (
+`👋 <b>欢迎使用 VoteKick Bot</b>
+
+🗳 <b>使用方法：</b>
+
+1️⃣ <b>发起投票：</b>
+   • 右键点击某个用户的消息 → 回复
+   • 在回复中发送 <code>/kick</code>
+
+2️⃣ <b>群成员投票：</b>
+   • 点击 ⬆️ 踢出 或 ⬇️ 不踢出
+   • 赞成票力达到阈值后自动踢人
+
+⚙️ <b>系统规则：</b>
+   • 权重系统：活跃成员投票力更大
+   • 冷却时间：防止滥用
+   • 管理员/群主无法被踢
+   • 权重公式：W = W_old × 0.98^d + log(1 + Δt)
+   • 投票力：√W
+
+❓ 有问题？请联系群管理员。`
+    );
+  }
+
+  private escape(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+}
