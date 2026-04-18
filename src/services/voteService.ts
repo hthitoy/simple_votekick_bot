@@ -1,18 +1,18 @@
 // src/services/voteService.ts
 type D1Database = any;
 
-import { TelegramAPI } from './telegram';
-import { VotesRepo } from './votesRepo';
-import { VoteRecordsRepo } from './voteRecordsRepo';
-import { UsersRepo } from './usersRepo';
-import { VerificationsRepo } from './verificationsRepo';
+import { TelegramAPI } from '../telegram';
+import { VotesRepo } from '../db/votesRepo';
+import { VoteRecordsRepo } from '../db/voteRecordsRepo';
+import { UsersRepo } from '../db/usersRepo';
+import { VerificationsRepo } from '../db/verificationsRepo';
 import { WeightService } from './weightService';
 import { RenderService } from './renderService';
 import { VerificationService } from './verificationService';
-import { TelegramMessage, TelegramCallbackQuery, DbVote, Env } from './types';
-import { BotMessagesRepo } from './botMessagesRepo';
+import { TelegramMessage, TelegramCallbackQuery, DbVote, Env } from '../types';
+import { BotMessagesRepo } from '../db/botMessagesRepo';
 import { BotMessageService } from './botMessageService';
-import { PendingDeletionsRepo } from './pendingDeletionsRepo';
+import { PendingDeletionsRepo } from '../db/pendingDeletionsRepo';
 
 type VoteChoice = 'yes' | 'no';
 

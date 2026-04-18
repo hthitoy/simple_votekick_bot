@@ -1,12 +1,12 @@
 // src/services/verificationService.ts
 type D1Database = any;
 
-import { VerificationsRepo, DbVerification } from './verificationsRepo';
-import { TelegramAPI } from './telegram';
+import { VerificationsRepo, DbVerification } from '../db/verificationsRepo';
+import { TelegramAPI } from '../telegram';
 import { RenderService } from './renderService';
-import { Env } from './types';
+import { Env } from '../types';
 import { BotMessageService } from './botMessageService';
-import { PendingDeletionsRepo } from './pendingDeletionsRepo';
+import { PendingDeletionsRepo } from '../db/pendingDeletionsRepo';
 
 function generateVerificationId(): string {
   return `vrfy_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;

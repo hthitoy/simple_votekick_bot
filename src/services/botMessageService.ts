@@ -1,5 +1,5 @@
-import { TelegramAPI } from './telegram';
-import { BotMessagesRepo } from './botMessagesRepo';
+import { TelegramAPI } from '../telegram';
+import { BotMessagesRepo } from '../db/botMessagesRepo';
 
 export class BotMessageService {
   constructor(

@@ -1,7 +1,7 @@
 // src/db/votesRepo.ts
 type D1Database = any; // Cloudflare D1
 
-import { DbVote } from './types';
+import { DbVote } from '../types';
 
 export class VotesRepo {
   constructor(private db: D1Database) {}

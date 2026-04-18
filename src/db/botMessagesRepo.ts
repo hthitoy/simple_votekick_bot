@@ -1,6 +1,6 @@
 type D1Database = any;
 
-import { DbBotMessage } from './types';
+import { DbBotMessage } from '../types';
 
 export class BotMessagesRepo {
   constructor(private db: D1Database) {}

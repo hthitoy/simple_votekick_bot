@@ -1,6 +1,6 @@
 // src/index.ts
 import { TelegramAPI } from './telegram';
-import { VoteService } from './voteService';
+import { VoteService } from './services/voteService';
 import { TelegramUpdate, Env } from './types';
 
 export default {

@@ -1,5 +1,5 @@
 // src/renderService.ts
-import { DbVote } from './types';
+import { DbVote } from '../types';
 
 export class RenderService {
 
