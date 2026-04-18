@@ -1,7 +1,7 @@
 // src/db/usersRepo.ts
 type D1Database = any; // Cloudflare D1
 
-import { DbUser } from './types';
+import { DbUser } from '../types';
 
 export class UsersRepo {
   constructor(private db: D1Database) {}

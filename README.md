@@ -1,263 +1,214 @@
-# 🗳 Telegram VoteKick Bot
+# 🗳 VoteKick Bot
 
-基于 Cloudflare Workers + D1 的群组加权投票踢人机器人。
+A Telegram group vote-based kick bot using Cloudflare Workers + D1 database with weighted voting and new member verification system.
 
 ---
 
-## 📦 项目结构
+## 📦 Project Structure
 
 ```
-telegram-votekick-bot/
+votekick/
 ├── src/
-│   ├── index.ts                      # 入口文件（Webhook + Cron）
-│   ├── telegram.ts                   # Telegram API 封装
-│   ├── types.ts                      # TypeScript 类型定义
-│   ├── renderService.ts              # UI 渲染
+│   ├── index.ts                      # Worker entry point (Webhook + Cron)
+│   ├── telegram.ts                   # Telegram API wrapper
+│   ├── types.ts                     # TypeScript type definitions
+│   ├── renderService.ts              # UI rendering
 │   ├── db/
-│   │   ├── usersRepo.ts              # 用户数据库操作
-│   │   ├── votesRepo.ts              # 投票数据库操作
-│   │   ├── voteRecordsRepo.ts        # 投票记录数据库操作
-│   │   └── verificationsRepo.ts      # 验证记录数据库操作
+│   │   ├── usersRepo.ts             # User database operations
+│   │   ├── votesRepo.ts              # Vote database operations
+│   │   ├── voteRecordsRepo.ts        # Vote records database operations
+│   │   ├── verificationsRepo.ts     # Verification records database operations
+│   │   ├── pendingDeletionsRepo.ts    # Pending deletions database operations
+│   │   └── botMessagesRepo.ts        # Bot messages database operations
 │   └── services/
-│       ├── voteService.ts            # 核心业务逻辑
-│       ├── weightService.ts          # 权重计算
-│       └── verificationService.ts    # 验证逻辑
+│       ├── voteService.ts           # Core voting logic
+│       ├── verificationService.ts    # New member verification logic
+│       ├── weightService.ts           # Weight calculation service
+│       └── botMessageService.ts      # Bot message service
 ├── migrations/
-│   ├── 0001_init.sql                 # 初始数据库建表语句
-│   └── 0002_add_verifications.sql    # 验证功能数据库扩展
+│   ├── 0001_init.sql                # Initial database schema
+│   ├── 0002_add_verifications.sql    # Verification feature extension
+│   ├── 0003_add_bot_message_tracking.sql
+│   └── create_pending_deletions.sql
 ├── scripts/
-│   └── set-webhook.js                # 设置 Telegram Webhook 脚本
-├── wrangler.toml                     # Cloudflare Workers 配置
+│   └── set-webhook.js                # Telegram Webhook setup script
+├── config/                           # Configuration templates
+├── docs/                             # Documentation
+├── wrangler.toml                     # Cloudflare Workers configuration
 ├── package.json
 └── tsconfig.json
 ```
 
 ---
 
-## ✨ 新功能：群组人机验证
+## ✨ Features
 
-### 功能说明
+### 1. Vote Kick System
+- Reply to a user's message and send `/kick` to initiate a vote
+- Group members vote, user is kicked when approval weight reaches threshold
+- Failed/expired votes are automatically cleaned up
 
-新成员加入群组时，会自动触发验证流程：
+### 2. New Member Verification System
+- New members are recorded silently when joining
+- Verification triggered on first message
+- 1 minute verification timeout
+- First failure kicks user, second failure permanently bans
 
-1. **新成员记录**：用户加入时记录在案
-2. **首次消息验证**：用户首次发送消息时被禁言
-3. **验证提示**：Bot 发送验证按钮提示 "I am not robot"
-4. **时间限制**：用户有 1 分钟时间完成验证
-5. **多次失败处理**：
-   - **第一次失败**：踢出用户（可以重新加入重试）
-   - **第二次失败**：永久封禁用户
-
-### 工作流程
-
-```
-新成员加入群组
-    ↓
-记录到 user_verifications 表（pending 状态）
-    ↓
-用户首次发消息
-    ↓
-检查是否需要验证 → 禁言用户，发送验证按钮
-    ↓
-用户点击 "I am not robot" 按钮
-    ├─ 是 → 更新状态为 verified，解除禁言 ✅
-    └─ 否
-        ↓
-    1分钟后过期（Cron 处理）
-        ├─ 第一次失败 → 踢出用户
-        └─ 第二次失败 → 永久封禁
-```
-
-### 配置
-
-在 `wrangler.toml` 中：
-
-```toml
-[vars]
-ENABLE_VERIFICATION = "1"    # 1 = 启用，0 = 禁用
-```
+### 3. Weighted Voting System
+- User reputation weights based on activity
+- Vote power = √weight
+- Dynamic kick threshold based on target's weight
 
 ---
 
-## 🚀 部署步骤（小白版）
+## 🚀 Deployment Steps
 
-### 第一步：准备工作
+### Prerequisites
 
-1. **注册 Cloudflare 账号**：https://cloudflare.com（免费）
+1. **Cloudflare Account**: https://cloudflare.com (Free)
+2. **Node.js**: https://nodejs.org (LTS recommended)
+3. **Telegram Bot**: 
+   - Search `@BotFather` on Telegram
+   - Send `/newbot` and follow the instructions
+   - Save your Bot Token
+   - Disable privacy mode for group usage: `/setprivacy` → Disabled
 
-2. **安装 Node.js**：https://nodejs.org（推荐 LTS 版本）
-
-3. **创建 Telegram Bot**：
-   - 在 Telegram 搜索 `@BotFather`
-   - 发送 `/newbot`，按提示创建
-   - 保存好 `Bot Token`（格式：`123456789:ABCdef...`）
-
-4. **把 Bot 加入群组**，并给它管理员权限（需要踢人权限和禁言权限）
-
----
-
-### 第二步：安装依赖
+### Step 1: Install Dependencies
 
 ```bash
-# 克隆或下载项目后进入目录
-cd telegram-votekick-bot
-
-# 安装依赖
 npm install
+```
 
-# 登录 Cloudflare（会打开浏览器）
+### Step 2: Login to Cloudflare
+
+```bash
 npx wrangler login
 ```
 
----
-
-### 第三步：创建 D1 数据库
+### Step 3: Create D1 Database
 
 ```bash
-# 创建数据库（会输出 database_id）
 npx wrangler d1 create votekick-db
 ```
 
-复制输出的 `database_id`，填入 `wrangler.toml` 中：
+Copy the `database_id` output and fill in `wrangler.toml`:
 
 ```toml
 [[d1_databases]]
 binding = "DB"
 database_name = "votekick-db"
-database_id = "粘贴你的database_id到这里"
+database_id = "YOUR_DATABASE_ID_HERE"
 ```
 
----
-
-### 第四步：初始化数据库表
+### Step 4: Initialize Database
 
 ```bash
-# 本地测试用（可选）
-npm run db:init
-
-# 线上正式环境（必须）
-npm run db:init:remote
-
-# 执行第二个迁移（添加验证表）
+# Run all migrations
+npx wrangler d1 execute votekick-db --remote --file=migrations/0001_init.sql
 npx wrangler d1 execute votekick-db --remote --file=migrations/0002_add_verifications.sql
+npx wrangler d1 execute votekick-db --remote --file=migrations/0003_add_bot_message_tracking.sql
+npx wrangler d1 execute votekick-db --remote --file=migrations/create_pending_deletions.sql
 ```
 
----
-
-### 第五步：配置 Bot Token
+### Step 5: Set Bot Token
 
 ```bash
-# 设置 Bot Token（替换成你的真实 Token）
 npx wrangler secret put BOT_TOKEN
-# 输入你的 Token 后按回车
+# Enter your Telegram Bot Token
 ```
 
----
-
-### 第六步：部署到 Cloudflare
+### Step 6: Deploy
 
 ```bash
-npm run deploy
+npx wrangler deploy
 ```
 
-部署成功后会输出你的 Worker URL，格式：
-`https://telegram-votekick-bot.你的用户名.workers.dev`
-
----
-
-### 第七步：设置 Telegram Webhook
+### Step 7: Set Webhook
 
 ```bash
-BOT_TOKEN=你的BotToken WORKER_URL=https://你的worker地址.workers.dev node scripts/set-webhook.js
+BOT_TOKEN=YOUR_BOT_TOKEN WORKER_URL=https://your-worker.workers.dev node scripts/set-webhook.js
 ```
 
 ---
 
-## ✅ 使用方法
+## ⚙️ Configuration
 
-### 投票功能
-
-在群里：
-
-1. **右键点击**某个用户的消息 → **回复**
-2. 在回复中发送 `/kick` 
-3. 机器人会发起投票
-4. 群成员点击按钮投票
-5. 赞成票力达到阈值（默认20）自动踢人
-
-### 私聊功能
-
-私聊 Bot 发送 `/start` 获得使用指南
+| Variable | Default | Description |
+|----------|---------|--------------|
+| `BASE_VOTE_THRESHOLD` | 20 | Base kick threshold |
+| `VOTE_DURATION_SECONDS` | 300 | Vote duration (seconds) |
+| `INITIATOR_COOLDOWN_SECONDS` | 60 | Initiator cooldown (seconds) |
+| `TARGET_COOLDOWN_SECONDS` | 180 | Same target cooldown (seconds) |
+| `MIN_WEIGHT_TO_INITIATE` | 1.0 | Minimum weight to initiate vote |
+| `ENABLE_VERIFICATION` | 1 | Enable verification (1=yes, 0=no) |
 
 ---
 
-## ⚙️ 配置项（wrangler.toml）
+## 📊 Weight System
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `VOTE_THRESHOLD` | `20` | 踢人所需票力阈值 |
-| `VOTE_DURATION_SECONDS` | `300` | 投票有效时间（秒），默认5分钟 |
-| `INITIATOR_COOLDOWN_SECONDS` | `60` | 发起人冷却时间（秒），默认1分钟 |
-| `TARGET_COOLDOWN_SECONDS` | `180` | 同一目标冷却时间（秒），默认3分钟 |
-| `MIN_WEIGHT_TO_INITIATE` | `1.0` | 发起投票最低信誉权重 |
-| `ENABLE_VERIFICATION` | `1` | 是否启用人机验证（1=启用，0=禁用） |
-
----
-
-## 📊 权重系统说明
-
-**信誉更新公式：**
+**Reputation Update Formula:**
 ```
 W_new = W_old × 0.98^d + log(1 + Δt)
 ```
-- `d` = 距上次更新天数（时间衰减）
-- `Δt` = 距上次发言秒数（活跃奖励）
+- `d` = days since last update (time decay)
+- `Δt` = seconds since last message (activity bonus)
 
-**投票权力：**
+**Vote Power:**
 ```
 vote_power = √W
 ```
 
----
-
-## 🛡️ 防滥用机制
-
-**投票相关：**
-- ❌ 管理员/群主不能被踢，不能参与投票
-- ❌ 不能对机器人发起投票
-- ❌ 不能对自己发起投票
-- ❌ 同一用户不能重复投票
-- ❌ 发起人冷却时间保护
-- ❌ 同一目标冷却时间保护
-
-**验证相关：**
-- ✅ 新成员自动验证（可关闭）
-- ✅ 1分钟验证时限
-- ✅ 首次失败自动踢出
-- ✅ 二次失败永久封禁
-- ✅ 已验证成员直接通过
-
----
-
-## ❓ 常见问题
-
-**Q: Bot 没反应？**
-- 确认 Bot 有管理员权限
-- 确认 Webhook 设置成功（`set-webhook.js` 返回 `ok: true`）
-- 检查 Cloudflare Workers 日志：`npx wrangler tail`
-
-**Q: 验证功能怎么关闭？**
-在 `wrangler.toml` 中将 `ENABLE_VERIFICATION` 改为 `0`
-
-**Q: 无法踢人？**
-- 确认 Bot 在群里有"踢出用户"权限
-- 确认 Bot 有"限制用户"权限（用于禁言）
-- 群主无法被踢（Telegram 限制）
-
-**Q: 怎么查看日志？**
-```bash
-npx wrangler tail
+**Dynamic Threshold:**
+```
+threshold = BASE_VOTE_THRESHOLD × (1 + target_weight / 100)
 ```
 
-**Q: 验证消息没有删除怎么办？**
-这是正常的。系统设计中，验证失败时只删除验证消息，用户的消息保留（这样可以追踪用户行为）。
+---
+
+## 🛡️ Anti-Abuse Mechanisms
+
+- Administrators/creators cannot be kicked
+- Cannot kick bots
+- Cannot kick yourself
+- Cannot vote twice
+- Initiator and target cooldown protection
+
+---
+
+## ❓ FAQ
+
+**Bot not responding?**
+- Ensure Bot has admin permissions
+- Ensure Webhook is set correctly
+- Check logs: `npx wrangler tail`
+
+**Cannot kick users?**
+- Ensure Bot has "Ban Users" permission
+- Group owners cannot be kicked (Telegram limitation)
+
+**How to disable verification?**
+- Set `ENABLE_VERIFICATION = "0"` in `wrangler.toml`
+
+---
+
+## 📝 Commands
+
+- `/kick` - Initiate vote to kick (reply to a message first)
+- `/start` - Get usage guide (private chat)
+
+---
+
+## 🌍 Languages
+
+- [中文版 README](./README_CN.md)
+
+---
+
+## License
+
+This project is licensed under the **GNU General Public License v2 (GPL-2.0)**. See [LICENSE](./LICENSE) for full license text.
+
+**Key points:**
+- Free to use and modify
+- Source code must be made available when distributing
+- Derivative works must be distributed under the same license

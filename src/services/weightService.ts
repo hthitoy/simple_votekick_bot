@@ -1,6 +1,6 @@
 // src/services/weightService.ts
-import { UsersRepo } from './usersRepo';
-import { DbUser } from './types';
+import { UsersRepo } from '../db/usersRepo';
+import { DbUser } from '../types';
 
 export class WeightService {
   constructor(private usersRepo: UsersRepo) {}
