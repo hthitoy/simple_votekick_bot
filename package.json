@@ -1,0 +1,17 @@
+{
+  "name": "telegram-votekick-bot",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute votekick-db --file=migrations/0001_init.sql",
+    "db:init:remote": "wrangler d1 execute votekick-db --remote --file=migrations/0001_init.sql",
+    "set-webhook": "node scripts/set-webhook.js"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "typescript": "^5.4.5",
+    "wrangler": "^3.57.0"
+  }
+}
