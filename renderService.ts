@@ -109,7 +109,7 @@ ${result}
   }
 
   renderVerificationSuccess(): string {
-    return `✅ <b>验证成功！</b>\n\n欢迎加入群组。禁言已解除。`;
+    return `✅ <b>验证成功！</b>\n欢迎加入群组。禁言已解除。`;
   }
 
   renderStartGuide(): string {
@@ -119,8 +119,7 @@ ${result}
 🗳 <b>使用方法：</b>
 
 1️⃣ <b>发起投票：</b>
-   • 右键点击某个用户的消息 → 回复
-   • 在回复中发送 <code>/kick</code>
+   • 回复目标消息并带上 <code>/kick</code> 命令
 
 2️⃣ <b>群成员投票：</b>
    • 点击 ⬆️ 踢出 或 ⬇️ 不踢出
@@ -130,10 +129,13 @@ ${result}
    • 权重系统：活跃成员投票力更大
    • 冷却时间：防止滥用
    • 管理员/群主无法被踢
-   • 权重公式：W = W_old × 0.98^d + log(1 + Δt)
-   • 投票力：√W
+   • 权重公式：
+  <code>Weight = Weight_old × 98%^Δd + log(1 + Δt)</code>
+  <code>Δd=为发言间隔(day)，Δt=发言间隔(min)</code>
+   • 投票力：√Weight
 
-❓ 有问题？请联系群管理员。`
+❓ 有问题？请联系群管理员。
+反馈群：@simplevotekick`
     );
   }
 
