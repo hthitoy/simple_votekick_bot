@@ -479,6 +479,7 @@ export class VoteService {
         console.log(`[删除] 踢出反馈消息: ${vote.bot_message_id}`);
         await this.tg.deleteMessage(vote.chat_id, vote.bot_message_id);
       } catch {}
+      await this.votesRepo.updateBotMessageId(vote.vote_id, 0);
     }
 
     const oldBotMessages = await this.botMessagesRepo.getInProgressBotMessages(30);
