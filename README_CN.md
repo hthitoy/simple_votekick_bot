@@ -39,9 +39,9 @@ telegram-votekick-bot/
 
 ### 第一步：准备工作
 
-1. **注册 Cloudflare 账号**：https://cloudflare.com（免费）
+1. **注册 Cloudflare 账号**：https://cloudflare.com （免费）
 
-2. **安装 Node.js**：https://nodejs.org（推荐 LTS 版本）
+2. **安装 Node.js**：https://nodejs.org （推荐 LTS 版本）
 
 3. **创建 Telegram Bot**：
    * 在 Telegram 搜索 `@BotFather`
