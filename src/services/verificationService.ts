@@ -180,6 +180,9 @@ export class VerificationService {
       }
     }
 
+    // 清理该用户的 pending_deletions 记录
+    await this.pendingDeletionsRepo.deleteByUser(chatId, userId);
+
     return true;
   }
 
