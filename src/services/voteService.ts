@@ -29,6 +29,7 @@ export class VoteService {
   private renderService: RenderService;
   private verificationService: VerificationService;
   private botMessageService: BotMessageService;
+  private botMessagesRepo: BotMessagesRepo;
   private pendingDeletionsRepo: PendingDeletionsRepo;
   private enableVerification: boolean;
 
@@ -43,7 +44,8 @@ export class VoteService {
     this.verificationsRepo = new VerificationsRepo(db);
     this.weightService = new WeightService(this.usersRepo);
     this.renderService = new RenderService();
-    this.botMessageService = new BotMessageService(tg, new BotMessagesRepo(db));
+    this.botMessagesRepo = new BotMessagesRepo(db);
+    this.botMessageService = new BotMessageService(tg, this.botMessagesRepo);
     this.pendingDeletionsRepo = new PendingDeletionsRepo(db);
     this.verificationService = new VerificationService(db, tg, env, this.botMessageService, this.pendingDeletionsRepo);
     this.enableVerification = (env.ENABLE_VERIFICATION ?? '1') === '1';
@@ -410,23 +412,44 @@ export class VoteService {
     }
 
     // Update vote message to show result
-    if (updated.message_id) {
+    let botMessageId = updated.message_id;
+    if (botMessageId) {
       const text = this.renderService.renderResultMessage(updated);
       await this.botMessageService.editMessageText(
         vote.chat_id,
-        updated.message_id,
+        botMessageId,
         text,
         { reply_markup: { inline_keyboard: [] } },
       );
+      await this.votesRepo.updateBotMessageId(vote.vote_id, botMessageId);
     }
 
-    // Kick then immediately unban (= remove from group, can rejoin)
-    // 日志: 踢出
+    // Delete target message
+    if (updated.target_message_id) {
+      try {
+        console.log(`[删除] 目标消息: ${updated.target_message_id}`);
+        await this.tg.deleteMessage(vote.chat_id, updated.target_message_id);
+      } catch {}
+    }
+
+    // Delete initiator message
+    if (updated.initiator_message_id) {
+      try {
+        console.log(`[删除] 发起人消息: ${updated.initiator_message_id}`);
+        await this.tg.deleteMessage(vote.chat_id, updated.initiator_message_id);
+      } catch {}
+    }
+
+    // Kick, unban (remove from group, can rejoin), then restrict (mute)
     console.log(`[踢出] 目标: ${vote.target_username || vote.target_first_name || vote.target_user_id} (${vote.target_user_id}) | 票力: ${vote.yes_weight} >= ${vote.threshold}`);
     try {
       await this.tg.kickChatMember(vote.chat_id, vote.target_user_id);
       await this.tg.unbanChatMember(vote.chat_id, vote.target_user_id);
-    } catch {}
+      await this.tg.restrictChatMember(vote.chat_id, vote.target_user_id, Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60);
+      console.log(`[禁言] 目标: ${vote.target_username || vote.target_first_name || vote.target_user_id} | 原因: 投票踢出 | 期限: 永久`);
+    } catch (e) {
+      console.error('[踢出] 失败:', e);
+    }
   }
 
   // ── Cron: expire votes and verifications ───────────────────────────────
@@ -441,5 +464,30 @@ export class VoteService {
   async processExpiredVerifications(): Promise<void> {
     if (!this.enableVerification) return;
     await this.verificationService.processExpiredVerifications();
+  }
+
+  async processOldKickFeedbackMessages(): Promise<void> {
+    const passedVotes = await this.votesRepo.getPassedVotesWithBotMessage();
+    const now = Math.floor(Date.now() / 1000);
+    const deleteAfterSeconds = 30;
+    
+    for (const vote of passedVotes) {
+      if (!vote.bot_message_id) continue;
+      if (vote.created_at + deleteAfterSeconds > now) continue;
+      
+      try {
+        console.log(`[删除] 踢出反馈消息: ${vote.bot_message_id}`);
+        await this.tg.deleteMessage(vote.chat_id, vote.bot_message_id);
+      } catch {}
+    }
+
+    const oldBotMessages = await this.botMessagesRepo.getInProgressBotMessages(30);
+    for (const msg of oldBotMessages) {
+      try {
+        console.log(`[删除] 提示消息: ${msg.message_id}`);
+        await this.tg.deleteMessage(msg.chat_id, msg.message_id);
+      } catch {}
+      await this.botMessagesRepo.markDeleted(msg.chat_id, msg.message_id);
+    }
   }
 }

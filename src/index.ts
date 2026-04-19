@@ -65,7 +65,10 @@ export default {
       // Process expired verifications
       await service.processExpiredVerifications();
 
-      console.log('[cron] Processed expired votes and verifications');
+      // Clean up old kick feedback messages
+      await service.processOldKickFeedbackMessages();
+
+      console.log('[cron] Processed expired votes, verifications, and kick feedback');
     } catch (err) {
       console.error('[scheduled] Unhandled error:', err);
     }
