@@ -113,13 +113,6 @@ export class VotesRepo {
     return (((result as { meta?: { changes?: number } } | null)?.meta?.changes) ?? 0) > 0;
   }
 
-  async updateVoteStatus(voteId: string, status: DbVote['status']): Promise<void> {
-    await this.db
-      .prepare('UPDATE votes SET status = ? WHERE vote_id = ?')
-      .bind(status, voteId)
-      .run();
-  }
-
   /**
    * Atomically transition a vote from 'active' to a terminal status.
    * The WHERE clause pins the current status to 'active', so only the first
