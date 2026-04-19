@@ -45,6 +45,14 @@ export interface TelegramCallbackQuery {
   data?: string;
 }
 
+export interface TelegramChatMemberUpdate {
+  chat: TelegramChat;
+  from?: TelegramUser;
+  date: number;
+  old_chat_member: TelegramChatMember;
+  new_chat_member: TelegramChatMember;
+}
+
 export interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
@@ -56,6 +64,7 @@ export interface TelegramUpdate {
     new_chat_member: TelegramChatMember;
     old_chat_member: TelegramChatMember;
   };
+  chat_member?: TelegramChatMemberUpdate;
 }
 
 export interface DbUser {

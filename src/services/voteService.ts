@@ -9,7 +9,7 @@ import { VerificationsRepo } from '../db/verificationsRepo';
 import { WeightService } from './weightService';
 import { RenderService } from './renderService';
 import { VerificationService } from './verificationService';
-import { TelegramMessage, TelegramCallbackQuery, DbVote, Env } from '../types';
+import { TelegramMessage, TelegramCallbackQuery, TelegramChatMemberUpdate, DbVote, Env } from '../types';
 import { BotMessagesRepo } from '../db/botMessagesRepo';
 import { BotMessageService } from './botMessageService';
 import { PendingDeletionsRepo } from '../db/pendingDeletionsRepo';
@@ -85,6 +85,10 @@ export class VoteService {
     const userId = String(from.id);
     const rawText = String(msg.text ?? '').toLowerCase().trim();
 
+    // 日志: 收到消息
+    const msgPreview = msg.text ? msg.text.slice(0, 50) : '(无文字)';
+    console.log(`[消息] 群: ${chat.title || 'Unknown'} (${chatId}) | 用户: ${from.username || from.first_name || 'Unknown'} (${userId}) | 内容: ${msgPreview}`);
+
     // ── Handle /start in private chat ────────────────────────────────────
     if (chat.type === 'private' && rawText.startsWith('/start')) {
       const guide = this.renderService.renderStartGuide();
@@ -107,6 +111,7 @@ export class VoteService {
           reason: 'verification_pending',
         });
         // 禁言用户
+        console.log(`[禁言] 用户: ${from.username || from.first_name} (${userId}) | 原因: 验证触发`);
         await this.tg.restrictChatMember(chatId, userId);
         // 发送验证提示
         await this.verificationService.sendVerificationPrompt(chatId, userId, msg.message_id);
@@ -126,7 +131,7 @@ export class VoteService {
   }
 
   /**
-   * 处理新成员加入
+   * 处理新成员加入 (小群用 message.new_chat_members)
    */
   async handleNewChatMember(msg: TelegramMessage): Promise<void> {
     if (!this.enableVerification || !msg.new_chat_members) return;
@@ -144,6 +149,24 @@ export class VoteService {
         newMember.first_name,
       );
     }
+  }
+
+  /**
+   * 处理chat_member更新 (大群用)
+   */
+  async handleChatMemberUpdate(update: TelegramChatMemberUpdate): Promise<void> {
+    if (!this.enableVerification) return;
+    if (update.new_chat_member.user.is_bot) return; // 跳过机器人
+
+    const chatId = String(update.chat.id);
+    const user = update.new_chat_member.user;
+    const userId = String(user.id);
+    await this.verificationService.handleNewChatMember(
+      chatId,
+      userId,
+      user.username ?? null,
+      user.first_name,
+    );
   }
 
   // ── Initiate vote ────────────────────────────────────────────────────────
@@ -257,6 +280,9 @@ export class VoteService {
     if (sent?.message_id) {
       await this.votesRepo.updateMessageId(voteId, sent.message_id);
     }
+
+    // 日志: 投票发起
+    console.log(`[投票] 发起: ${from.username || from.first_name} (${initiatorId}) → 目标: ${target.username || target.first_name} (${targetId}) | 阈值: ${threshold}`);
   }
 
   // ── Callback handler ─────────────────────────────────────────────────────
@@ -363,8 +389,11 @@ export class VoteService {
     if (!updated) return;
 
     if (status !== 'passed') {
+      // 日志: 投票失败/过期，删除消息
+      console.log(`[投票结束] 状态: ${status} | 目标: ${vote.target_username || vote.target_user_id}`);
       if (updated.message_id) {
         try {
+          console.log(`[删除] 投票UI消息: ${updated.message_id}`);
           await this.botMessageService.deleteMessage(vote.chat_id, updated.message_id);
         } catch {}
       }
@@ -373,6 +402,7 @@ export class VoteService {
       for (const msgId of userMessageIds) {
         if (!msgId) continue;
         try {
+          console.log(`[删除] 发起人消息: ${msgId}`);
           await this.tg.deleteMessage(vote.chat_id, msgId);
         } catch {}
       }
@@ -391,6 +421,8 @@ export class VoteService {
     }
 
     // Kick then immediately unban (= remove from group, can rejoin)
+    // 日志: 踢出
+    console.log(`[踢出] 目标: ${vote.target_username || vote.target_first_name || vote.target_user_id} (${vote.target_user_id}) | 票力: ${vote.yes_weight} >= ${vote.threshold}`);
     try {
       await this.tg.kickChatMember(vote.chat_id, vote.target_user_id);
       await this.tg.unbanChatMember(vote.chat_id, vote.target_user_id);
