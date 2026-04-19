@@ -22,11 +22,9 @@ export class RenderService {
 
     return (
 `🗳 VoteKick ${target}${quoted}
-
 📊 投票倾向：${bar}
 ⬆️ ${vote.yes_weight.toFixed(1)}  ⬇️ ${vote.no_weight.toFixed(1)}  ⚖️ ${net >= 0 ? '+' : ''}${net.toFixed(1)}
-
-🎯 阈值：${vote.threshold}  ⏱ 发起：${startTime}  ⏳ 有效：${durationMin}分钟`
+⏳ 有效：${durationMin}分钟  🎯 阈值：${vote.threshold}`
     );
   }
 
