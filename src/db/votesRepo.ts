@@ -123,4 +123,19 @@ export class VotesRepo {
 
     return ((result as { results?: DbVote[] } | null)?.results) ?? [];
   }
+
+  async updateBotMessageId(voteId: string, botMessageId: number): Promise<void> {
+    await this.db
+      .prepare('UPDATE votes SET bot_message_id = ? WHERE vote_id = ?')
+      .bind(botMessageId, voteId)
+      .run();
+  }
+
+  async getPassedVotesWithBotMessage(): Promise<DbVote[]> {
+    const result = await this.db
+      .prepare("SELECT * FROM votes WHERE status = 'passed' AND bot_message_id IS NOT NULL")
+      .all();
+
+    return ((result as { results?: DbVote[] } | null)?.results) ?? [];
+  }
 }

@@ -44,4 +44,14 @@ export class BotMessagesRepo {
 
     return (result as DbBotMessage | null) ?? null;
   }
+
+  async getInProgressBotMessages(olderThanSeconds: number): Promise<DbBotMessage[]> {
+    const now = Math.floor(Date.now() / 1000);
+    const result = await this.db
+      .prepare("SELECT * FROM bot_messages WHERE status = 'in_progress' AND created_at < ?")
+      .bind(now - olderThanSeconds)
+      .all();
+
+    return ((result as { results?: DbBotMessage[] } | null)?.results) ?? [];
+  }
 }

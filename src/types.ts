@@ -95,6 +95,7 @@ export interface DbVote {
   status: 'active' | 'passed' | 'rejected' | 'expired';
   quoted_text: string | null;
   message_id: number | null;
+  bot_message_id: number | null;
   expires_at: number;
   created_at: number;
 }
