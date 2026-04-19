@@ -16,7 +16,7 @@ async function setWebhook() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       url: WORKER_URL,
-      allowed_updates: ['message', 'callback_query'],
+      allowed_updates: ['message', 'callback_query', 'chat_member'],
     }),
   });
   const json = await res.json();

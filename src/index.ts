@@ -12,15 +12,13 @@ export default {
 
     try {
       const update: TelegramUpdate = await request.json();
+      
+      console.log('[update] types: msg=' + !!update.message + ' cb=' + !!update.callback_query + ' chat_mem=' + !!update.chat_member);
       const tg = new TelegramAPI(env.BOT_TOKEN);
       const service = new VoteService(env.DB, tg, env);
 
       // Handle message updates
       if (update.message) {
-        // Check for new chat members
-        if (update.message.new_chat_members && update.message.new_chat_members.length > 0) {
-          await service.handleNewChatMember(update.message);
-        }
         // Handle regular messages
         await service.handleMessage(update.message);
       }
@@ -35,6 +33,18 @@ export default {
           status: update.my_chat_member.new_chat_member.status,
           old_status: update.my_chat_member.old_chat_member.status,
         });
+      }
+      // Handle chat_member updates (all groups - new member detection)
+      else if (update.chat_member) {
+        const oldStatus = update.chat_member.old_chat_member.status;
+        const newStatus = update.chat_member.new_chat_member.status;
+        const user = update.chat_member.new_chat_member.user;
+        
+        // User joined: newStatus is "member", oldStatus is "left"/"kicked"/null (first-time join)
+        if (newStatus === 'member' && (oldStatus === 'left' || oldStatus === 'kicked' || oldStatus === null || oldStatus === undefined)) {
+          console.log('[新成员] 群: ' + update.chat_member.chat.id + ' | 用户: ' + user.first_name + '(' + user.id + ') | 状态: ' + oldStatus + ' → ' + newStatus);
+          await service.handleChatMemberUpdate(update.chat_member);
+        }
       }
     } catch (err) {
       console.error('[fetch] Unhandled error:', err);
