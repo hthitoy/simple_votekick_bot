@@ -72,12 +72,19 @@ export class VoteService {
 
   // ── Message handler ──────────────────────────────────────────────────────
 
-  async handlePrivateStart(userId: string): Promise<void> {
+  async handlePrivateStart(userId: string, triggerMessageId?: number): Promise<void> {
     if (!this.enableVerification) return;
 
     console.log('[私聊] /verify from user:', userId);
 
     await this.verificationService.sendPrivateVerificationPrompt(userId);
+
+    if (triggerMessageId) {
+      try {
+        console.log(`[删除] 用户命令消息: ${triggerMessageId}`);
+        await this.tg.deleteMessage(userId, triggerMessageId);
+      } catch {}
+    }
   }
 
   async sendHelpMessage(chatId: string): Promise<void> {

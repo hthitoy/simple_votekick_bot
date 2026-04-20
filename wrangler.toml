@@ -15,7 +15,7 @@ ENABLE_VERIFICATION = "1"
 [[d1_databases]]
 binding = "DB"
 database_name = "votekick-db"
-database_id = "your database id"
+database_id = "0a3f213d-dc3c-4bb3-86dc-0b3fc896322e"
 
 [triggers]
 crons = ["*/1 * * * *"]
