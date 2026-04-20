@@ -48,8 +48,26 @@ export class VoteService {
     this.botMessageService = new BotMessageService(tg, this.botMessagesRepo);
     this.pendingDeletionsRepo = new PendingDeletionsRepo(db);
     this.verificationService = new VerificationService(db, tg, env, this.botMessageService, this.pendingDeletionsRepo);
+    this.groupSettingsRepo = new GroupSettingsRepo(db);
     this.enableVerification = (env.ENABLE_VERIFICATION ?? '1') === '1';
     this.verificationService.setBotUsername(env.BOT_USERNAME || 'votekick-bot');
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────
+
+  private async isVoteKickEnabled(chatId: string): Promise<boolean> {
+    const settings = await this.groupSettingsRepo.getSettings(chatId);
+    return settings ? settings.vote_kick_enabled === 1 : true; // default enabled
+  }
+
+  private async isVerificationEnabled(chatId: string): Promise<boolean> {
+    const settings = await this.groupSettingsRepo.getSettings(chatId);
+    return settings ? settings.verification_enabled === 1 : true; // default enabled
+  }
+
+  private async isAutoCleanupEnabled(chatId: string): Promise<boolean> {
+    const settings = await this.groupSettingsRepo.getSettings(chatId);
+    return settings ? settings.auto_cleanup_enabled === 1 : true; // default enabled
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
@@ -64,6 +82,15 @@ export class VoteService {
 
   private get targetCooldown(): number {
     return Number(this.env.TARGET_COOLDOWN_SECONDS ?? 1800);
+  }
+
+  private async isAdminOrCreator(chatId: string, userId: string): Promise<boolean> {
+    try {
+      const member = await this.tg.getChatMember(chatId, userId);
+      return member && (member.status === 'administrator' || member.status === 'creator');
+    } catch {
+      return false;
+    }
   }
 
   private get minWeightToInitiate(): number {
@@ -132,7 +159,8 @@ export class VoteService {
     if (chat.type === 'private') return;
 
     // ── Verification flow ────────────────────────────────────────────────
-    if (this.enableVerification) {
+    const verificationEnabled = await this.isVerificationEnabled(chatId);
+    if (this.enableVerification && verificationEnabled) {
       const shouldVerify = await this.verificationService.shouldVerifyUser(chatId, userId);
       if (shouldVerify) {
         // 记录消息到 pending_deletions
@@ -159,6 +187,12 @@ export class VoteService {
 
     if (!isKick) return;
 
+    // Check if vote kick is enabled for this group
+    const voteKickEnabled = await this.isVoteKickEnabled(chatId);
+    if (!voteKickEnabled) {
+      return; // Vote kick is disabled, ignore the command
+    }
+
     const replyMsg = msg.reply_to_message ?? null;
     await this.initiateVote(msg, replyMsg);
   }
@@ -167,9 +201,12 @@ export class VoteService {
    * 处理新成员加入 (小群用 message.new_chat_members)
    */
   async handleNewChatMember(msg: TelegramMessage): Promise<void> {
-    if (!this.enableVerification || !msg.new_chat_members) return;
+    if (!msg.new_chat_members) return;
 
     const chatId = String(msg.chat.id);
+    const verificationEnabled = await this.isVerificationEnabled(chatId);
+    
+    if (!this.enableVerification || !verificationEnabled) return;
 
     for (const newMember of msg.new_chat_members) {
       if (newMember.is_bot) continue; // 不跟踪机器人
@@ -207,6 +244,13 @@ export class VoteService {
   async initiateVote(msg: TelegramMessage, replyMsg: any): Promise<void> {
     const from = msg.from;
     const chat = msg.chat;
+
+    // Check if vote kick is enabled for this group
+    const voteKickEnabled = await this.isVoteKickEnabled(chat.id);
+    if (!voteKickEnabled) {
+      // Vote kick is disabled for this group, ignore the command
+      return;
+    }
 
     if (!from || !replyMsg?.from) {
       // 无效请求直接无视不报错

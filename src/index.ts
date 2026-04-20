@@ -23,7 +23,7 @@ export default {
         if (update.message.chat?.type === 'private') {
           const text = update.message.text || '';
           if (text.startsWith('/start') || text.startsWith('/verify')) {
-            await service.handlePrivateStart(update.message.from?.id.toString() || '', update.message.message_id);
+            await service.handlePrivateStart(update.message.from?.id.toString() || '');
           } else if (text.startsWith('/help')) {
             await service.sendHelpMessage(update.message.chat.id.toString());
           }
