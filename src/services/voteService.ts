@@ -89,7 +89,11 @@ export class VoteService {
 
   async sendHelpMessage(chatId: string): Promise<void> {
     const helpText = this.renderService.renderStartGuide();
-    await this.botMessageService.sendMessage(chatId, helpText, { parse_mode: 'HTML' });
+    try {
+      await this.botMessageService.sendEphemeralMessage(chatId, helpText, { parse_mode: 'HTML' });
+    } catch (e) {
+      console.error('Failed to send help message:', e);
+    }
   }
 
   async handleMessage(msg: TelegramMessage): Promise<void> {
