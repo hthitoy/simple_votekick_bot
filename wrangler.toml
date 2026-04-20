@@ -4,6 +4,7 @@ compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
+BOT_USERNAME = "simple_votekick_bot"
 BASE_VOTE_THRESHOLD = "20"
 VOTE_DURATION_SECONDS = "300"
 INITIATOR_COOLDOWN_SECONDS = "60"

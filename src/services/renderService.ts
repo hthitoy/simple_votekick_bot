@@ -90,24 +90,37 @@ ${result}
   // 验证相关的渲染方法
   // ════════════════════════════════════════════════════════════════════════
 
-  renderVerificationPrompt(): string {
-    return (
-`🤖 <b>欢迎！请在一分钟内点击下方按钮确认你是人类：</b>`
-    );
+  renderVerificationPrompt(source: 'group' | 'private' = 'group'): string {
+    if (source === 'private') {
+      return `🤖 <b>请在一分钟内点击下方按钮确认你是人类：</b>\n\n验证成功后自动解除群内禁言。`;
+    }
+    return `🤖 <b>欢迎！请在一分钟内点击下方按钮确认你是人类：</b>`;
   }
 
-  buildVerificationKeyboard(verificationId: string) {
-    return {
-      inline_keyboard: [
-        [
-          { text: '✅ I am not robot', callback_data: `verify:${verificationId}` }
-        ]
-      ]
-    };
+  buildVerificationKeyboard(verificationId: string, botUsername?: string) {
+    const keyboard = { inline_keyboard: [[{ text: '✅ I am not robot', callback_data: `verify:${verificationId}` }]] };
+
+    if (botUsername) {
+      keyboard.inline_keyboard.push([{ text: '🤖 前往验证', url: `https://t.me/${botUsername}?start=verify_${verificationId}` }]);
+    }
+
+    return keyboard;
+  }
+
+  buildPrivateVerificationKeyboard(verificationId: string) {
+    return { inline_keyboard: [[{ text: '✅ I am not robot', callback_data: `verify:${verificationId}` }]] };
   }
 
   renderVerificationSuccess(): string {
     return `✅ <b>验证成功！</b>\n欢迎加入群组。禁言已解除。`;
+  }
+
+  renderVerificationSuccessWithGroupLink(groupTitle?: string): string {
+    return `✅ <b>验证成功！</b>\n验证通过，禁言已解除。\n${groupTitle ? `群组：${groupTitle}` : ''}`;
+  }
+
+  renderPrivateVerificationPrompt(botUsername: string): string {
+    return `🤖 <b>请在一分钟内点击下方按钮确认你是人类：</b>`;
   }
 
   renderStartGuide(): string {

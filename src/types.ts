@@ -4,6 +4,7 @@ type D1Database = any;
 export interface Env {
   DB: D1Database;
   BOT_TOKEN: string;
+  BOT_USERNAME?: string;
   BASE_VOTE_THRESHOLD: string;
   VOTE_DURATION_SECONDS: string;
   INITIATOR_COOLDOWN_SECONDS: string;
@@ -36,6 +37,7 @@ export interface TelegramMessage {
   text?: string;
   reply_to_message?: TelegramMessage;
   new_chat_members?: TelegramUser[];
+  date: number;
 }
 
 export interface TelegramCallbackQuery {
