@@ -49,6 +49,7 @@ export class VoteService {
     this.pendingDeletionsRepo = new PendingDeletionsRepo(db);
     this.verificationService = new VerificationService(db, tg, env, this.botMessageService, this.pendingDeletionsRepo);
     this.enableVerification = (env.ENABLE_VERIFICATION ?? '1') === '1';
+    this.verificationService.setBotUsername(env.BOT_USERNAME || 'votekick-bot');
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
@@ -71,7 +72,26 @@ export class VoteService {
 
   // ── Message handler ──────────────────────────────────────────────────────
 
+  async handlePrivateStart(userId: string): Promise<void> {
+    if (!this.enableVerification) return;
+
+    console.log('[私聊] /verify from user:', userId);
+
+    await this.verificationService.sendPrivateVerificationPrompt(userId);
+  }
+
+  async sendHelpMessage(chatId: string): Promise<void> {
+    const helpText = this.renderService.renderStartGuide();
+    await this.botMessageService.sendMessage(chatId, helpText, { parse_mode: 'HTML' });
+  }
+
   async handleMessage(msg: TelegramMessage): Promise<void> {
+    const chatType = msg.chat.type;
+
+    if (chatType === 'private') {
+      return;
+    }
+
     const from = msg.from;
     const chat = msg.chat;
 

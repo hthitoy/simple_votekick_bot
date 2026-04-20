@@ -10,6 +10,7 @@ export interface DbVerification {
   failure_count: number;
   message_id: number | null;
   trigger_message_id: number | null;
+  source: 'group' | 'private';
   created_at: number;
   expires_at: number;
   verified_at: number | null;
@@ -23,15 +24,16 @@ export class VerificationsRepo {
     userId: string,
     verificationId: string,
     expiresAt: number,
+    source: 'group' | 'private' = 'group',
   ): Promise<DbVerification> {
     const now = Math.floor(Date.now() / 1000);
     await this.db
       .prepare(`
         INSERT INTO user_verifications 
-        (chat_id, user_id, verification_id, status, failure_count, created_at, expires_at)
-        VALUES (?, ?, ?, 'pending', 0, ?, ?)
+        (chat_id, user_id, verification_id, status, failure_count, source, created_at, expires_at)
+        VALUES (?, ?, ?, 'pending', 0, ?, ?, ?)
       `)
-      .bind(chatId, userId, verificationId, now, expiresAt)
+      .bind(chatId, userId, verificationId, source, now, expiresAt)
       .run();
 
     return (await this.getVerification(verificationId))!;
@@ -191,5 +193,33 @@ export class VerificationsRepo {
       .first();
 
     return ((((result as { count: number } | null)?.count) ?? 0) > 0);
+  }
+
+  async getPendingVerificationByUser(userId: string): Promise<DbVerification | null> {
+    const result = await this.db
+      .prepare(`
+        SELECT * FROM user_verifications
+        WHERE user_id = ? AND status = 'pending'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `)
+      .bind(userId)
+      .first();
+
+    return (result as DbVerification | null) ?? null;
+  }
+
+  async getAnyPendingVerification(userId: string): Promise<DbVerification | null> {
+    const result = await this.db
+      .prepare(`
+        SELECT * FROM user_verifications
+        WHERE user_id = ? AND status = 'pending' AND source = 'group'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `)
+      .bind(userId)
+      .first();
+
+    return (result as DbVerification | null) ?? null;
   }
 }
