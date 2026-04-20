@@ -19,6 +19,14 @@ export class BotMessageService {
     return sent;
   }
 
+  async sendEphemeralMessage(
+    chatId: string,
+    text: string,
+    extra: Record<string, unknown> = {},
+  ): Promise<{ message_id: number } | null> {
+    return await this.tg.sendMessage(chatId, text, extra);
+  }
+
   async editMessageText(
     chatId: string,
     messageId: number,
