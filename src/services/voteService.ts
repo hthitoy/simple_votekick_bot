@@ -13,6 +13,7 @@ import { TelegramMessage, TelegramCallbackQuery, TelegramChatMemberUpdate, DbVot
 import { BotMessagesRepo } from '../db/botMessagesRepo';
 import { BotMessageService } from './botMessageService';
 import { PendingDeletionsRepo } from '../db/pendingDeletionsRepo';
+import { GroupSettingsRepo } from '../db/groupSettingsRepo';
 
 type VoteChoice = 'yes' | 'no';
 
@@ -62,7 +63,12 @@ export class VoteService {
 
   private async isVerificationEnabled(chatId: string): Promise<boolean> {
     const settings = await this.groupSettingsRepo.getSettings(chatId);
-    return settings ? settings.verification_enabled === 1 : true; // default enabled
+    return settings ? settings.verification_enabled === 1 : true; // default enabled (入群验证)
+  }
+
+  private async isMessageVerificationEnabled(chatId: string): Promise<boolean> {
+    const settings = await this.groupSettingsRepo.getSettings(chatId);
+    return settings ? settings.message_verification_enabled === 1 : true; // default enabled (首次发消息验证)
   }
 
   private async isAutoCleanupEnabled(chatId: string): Promise<boolean> {
@@ -158,9 +164,9 @@ export class VoteService {
 
     if (chat.type === 'private') return;
 
-    // ── Verification flow ────────────────────────────────────────────────
-    const verificationEnabled = await this.isVerificationEnabled(chatId);
-    if (this.enableVerification && verificationEnabled) {
+    // ── Message verification flow (首次发消息验证) ─────────────────────
+    const messageVerificationEnabled = await this.isMessageVerificationEnabled(chatId);
+    if (this.enableVerification && messageVerificationEnabled) {
       const shouldVerify = await this.verificationService.shouldVerifyUser(chatId, userId);
       if (shouldVerify) {
         // 记录消息到 pending_deletions
@@ -172,7 +178,7 @@ export class VoteService {
           reason: 'verification_pending',
         });
         // 禁言用户
-        console.log(`[禁言] 用户: ${from.username || from.first_name} (${userId}) | 原因: 验证触发`);
+        console.log(`[禁言] 用户: ${from.username || from.first_name} (${userId}) | 原因: 首次发消息验证`);
         await this.tg.restrictChatMember(chatId, userId);
         // 发送验证提示
         await this.verificationService.sendVerificationPrompt(chatId, userId, msg.message_id);
@@ -225,10 +231,13 @@ export class VoteService {
    * 处理chat_member更新 (大群用)
    */
   async handleChatMemberUpdate(update: TelegramChatMemberUpdate): Promise<void> {
-    if (!this.enableVerification) return;
+    const chatId = String(update.chat.id);
+    
+    // 入群验证 - 受 verification_enabled 控制
+    const verificationEnabled = await this.isVerificationEnabled(chatId);
+    if (!this.enableVerification || !verificationEnabled) return;
     if (update.new_chat_member.user.is_bot) return; // 跳过机器人
 
-    const chatId = String(update.chat.id);
     const user = update.new_chat_member.user;
     const userId = String(user.id);
     await this.verificationService.handleNewChatMember(
