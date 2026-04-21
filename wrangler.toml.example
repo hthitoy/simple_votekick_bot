@@ -4,7 +4,7 @@ compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-BOT_USERNAME = "your_bot_username"
+BOT_USERNAME = "your_bot_username"  <----Need to change to a real bot name (without '@')
 BASE_VOTE_THRESHOLD = "20"
 VOTE_DURATION_SECONDS = "300"
 INITIATOR_COOLDOWN_SECONDS = "60"
@@ -15,7 +15,7 @@ ENABLE_VERIFICATION = "1"
 [[d1_databases]]
 binding = "DB"
 database_name = "votekick-db"
-database_id = "your_database_id"
+database_id = "your_database_id"  <----Need to change to a real ID
 
 [triggers]
 crons = ["*/1 * * * *"]
