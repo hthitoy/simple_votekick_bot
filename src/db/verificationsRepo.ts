@@ -11,6 +11,7 @@ export interface DbVerification {
   message_id: number | null;
   trigger_message_id: number | null;
   source: 'group' | 'private';
+  message_verified: number; // 0 = not verified via message, 1 = verified via message
   created_at: number;
   expires_at: number;
   verified_at: number | null;
@@ -30,8 +31,8 @@ export class VerificationsRepo {
     await this.db
       .prepare(`
         INSERT INTO user_verifications 
-        (chat_id, user_id, verification_id, status, failure_count, source, created_at, expires_at)
-        VALUES (?, ?, ?, 'pending', 0, ?, ?, ?)
+        (chat_id, user_id, verification_id, status, failure_count, source, message_verified, created_at, expires_at)
+        VALUES (?, ?, ?, 'pending', 0, ?, 0, ?, ?)
       `)
       .bind(chatId, userId, verificationId, source, now, expiresAt)
       .run();
@@ -86,6 +87,14 @@ export class VerificationsRepo {
     await this.db
       .prepare(`UPDATE user_verifications SET ${sets.join(', ')} WHERE verification_id = ?`)
       .bind(...params)
+      .run();
+  }
+
+  async updateMessageVerified(verificationId: string, verified: boolean): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    await this.db
+      .prepare(`UPDATE user_verifications SET message_verified = ?, verified_at = ? WHERE verification_id = ?`)
+      .bind(verified ? 1 : 0, now, verificationId)
       .run();
   }
 
@@ -172,6 +181,15 @@ export class VerificationsRepo {
   async getVerifiedUser(chatId: string, userId: string): Promise<DbVerification | null> {
     const result = await this.db
       .prepare("SELECT * FROM user_verifications WHERE chat_id = ? AND user_id = ? AND status = 'verified' LIMIT 1")
+      .bind(chatId, userId)
+      .first();
+
+    return (result as DbVerification | null) ?? null;
+  }
+
+  async getMessageVerifiedUser(chatId: string, userId: string): Promise<DbVerification | null> {
+    const result = await this.db
+      .prepare("SELECT * FROM user_verifications WHERE chat_id = ? AND user_id = ? AND message_verified = 1 LIMIT 1")
       .bind(chatId, userId)
       .first();
 

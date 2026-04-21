@@ -49,8 +49,15 @@ export class VerificationService {
       return;
     }
 
+    // 检查是否已通过入群验证
     const verified = await this.verificationsRepo.getVerifiedUser(chatId, userId);
     if (verified) {
+      return;
+    }
+
+    // 检查是否已通过首次发消息验证
+    const messageVerified = await this.verificationsRepo.getMessageVerifiedUser(chatId, userId);
+    if (messageVerified) {
       return;
     }
 
@@ -130,10 +137,10 @@ export class VerificationService {
       return false; // 已被ban，不处理
     }
 
-    // 检查是否已验证
-    const verified = await this.verificationsRepo.getVerifiedUser(chatId, userId);
-    if (verified) {
-      return false; // 已验证，无需再验证
+    // 检查是否已通过首次发消息验证（message_verified）
+    const messageVerified = await this.verificationsRepo.getMessageVerifiedUser(chatId, userId);
+    if (messageVerified) {
+      return false; // 已通过首次发消息验证，无需再验证
     }
 
     // 检查是否有待验证的记录
@@ -285,6 +292,8 @@ export class VerificationService {
 
     // 验证成功
     await this.verificationsRepo.updateVerificationStatus(verificationId, 'verified', verification.message_id ?? undefined);
+    // 标记为已通过首次发消息验证
+    await this.verificationsRepo.updateMessageVerified(verificationId, true);
     await this.tg.answerCallbackQuery(callbackQueryId, '✅ 验证成功！');
 
     // 只删除验证消息，不删除用户首发消息
@@ -334,8 +343,10 @@ export class VerificationService {
       return false;
     }
 
-    // 验证成功
+    // 验证成功 - 入群验证
     await this.verificationsRepo.updateVerificationStatus(verificationId, 'verified', verification.message_id ?? undefined);
+    // 标记为已通过首次发消息验证（入群验证后也标记，这样首次发消息就不需要再验证了）
+    await this.verificationsRepo.updateMessageVerified(verificationId, true);
     await this.tg.answerCallbackQuery(callbackQueryId, '✅ 验证成功！');
 
     // 删除私聊里的验证消息
