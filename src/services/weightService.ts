@@ -32,7 +32,7 @@ export class WeightService {
     const daysSinceUpdate = (now - lastUpdate) / 86400;
 
     // Δt = seconds since last message
-    const secondsSinceMessage = (now - lastMessage) / 60;
+    const secondsSinceMessage = now - lastMessage;
 
     // W_new = W_old * 0.98^d + log(1 + Δt)
     const decayFactor = Math.pow(0.98, daysSinceUpdate);
