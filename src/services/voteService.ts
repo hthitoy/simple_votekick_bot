@@ -337,7 +337,7 @@ export class VoteService {
     const threshold = Math.round(baseThreshold * (1 + targetWeight / 100));
     const expiresAt = now + duration;
 
-    await this.votesRepo.createVote({
+    const created = await this.votesRepo.createVote({
       vote_id: voteId,
       chat_id: chatId,
       target_user_id: targetId,
@@ -355,6 +355,11 @@ export class VoteService {
       message_id: null,
       expires_at: expiresAt,
     });
+    if (!created) {
+      // A concurrent /kick request won the race and already inserted an active vote.
+      await this.reply(chatId, '❌ 已有进行中的投票');
+      return;
+    }
 
     const vote = await this.votesRepo.getVote(voteId);
     if (!vote) return;
@@ -469,7 +474,9 @@ export class VoteService {
     vote: DbVote,
     status: 'passed' | 'rejected' | 'expired',
   ): Promise<void> {
-    await this.votesRepo.updateVoteStatus(vote.vote_id, status);
+    // Atomic guard: only the first concurrent caller proceeds.
+    const settled = await this.votesRepo.settleVoteStatus(vote.vote_id, status);
+    if (!settled) return;
 
     const updated = await this.votesRepo.getVote(vote.vote_id);
     if (!updated) return;
