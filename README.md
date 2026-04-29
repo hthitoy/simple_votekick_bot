@@ -155,12 +155,12 @@ W_new = W_old × 0.90^Δd + log(1 + Δt * 0.0005)
 
 **Vote Power:**
 ```
-vote_power = √W
+vote_power = W
 ```
 
 **Dynamic Threshold:**
 ```
-threshold = BASE_VOTE_THRESHOLD × (1 + target_weight / 100)
+threshold = 40 × (1 + √W / 5)
 ```
 
 ---

@@ -335,7 +335,8 @@ export class VoteService {
     const duration = Number(this.env.VOTE_DURATION_SECONDS ?? 300);
     const baseThreshold = Number(this.env.BASE_VOTE_THRESHOLD ?? 20);
     const targetWeight = await this.weightService.getUserWeight(chatId, targetId);
-    const threshold = Math.round(baseThreshold * (1 + targetWeight / 100));
+    // 新阈值公式：40 * (1 + sqrt(weight) / 5)
+    const threshold = Math.round(40 * (1 + Math.sqrt(targetWeight) / 5));
     const expiresAt = now + duration;
 
     await this.votesRepo.createVote({
@@ -418,7 +419,8 @@ export class VoteService {
       let weight = await this.weightService.getUserWeight(chatId, voterId);
       if (weight < 0.1) weight = 1;
 
-      const power = this.weightService.calculateVotePower(weight);
+      // 使用权重直接作为投票力度（不再取平方根）
+      const power = weight;
 
       const inserted = await this.recordsRepo.createRecord(voteId, chatId, voterId, choice, power);
       if (!inserted) {
