@@ -5,7 +5,6 @@ export interface GroupSetting {
   chat_id: string;
   vote_kick_enabled: number; // 1 for true, 0 for false
   verification_enabled: number;
-  message_verification_enabled: number;
   auto_cleanup_enabled: number;
   created_at?: number;
   updated_at?: number;
@@ -28,16 +27,8 @@ export class GroupSettingsRepo {
     if (!existing) {
       await this.db
         .prepare(`
-          INSERT INTO group_settings (chat_id, vote_kick_enabled, verification_enabled, message_verification_enabled, auto_cleanup_enabled)
-          VALUES (?, 1, 1, 1, 1)
-        `)
-        .bind(chatId)
-        .run();
-    } else if ((existing as any).message_verification_enabled === undefined) {
-      // 添加缺失的 message_verification_enabled 字段
-      await this.db
-        .prepare(`
-          UPDATE group_settings SET message_verification_enabled = 1 WHERE chat_id = ?
+          INSERT INTO group_settings (chat_id, vote_kick_enabled, verification_enabled, auto_cleanup_enabled)
+          VALUES (?, 1, 1, 1)
         `)
         .bind(chatId)
         .run();
@@ -71,17 +62,6 @@ export class GroupSettingsRepo {
       .prepare(`
         UPDATE group_settings
         SET auto_cleanup_enabled = ?, updated_at = ?
-        WHERE chat_id = ?
-      `)
-      .bind(enabled ? 1 : 0, Math.floor(Date.now() / 1000), chatId)
-      .run();
-  }
-
-  async updateMessageVerificationEnabled(chatId: string, enabled: boolean): Promise<void> {
-    await this.db
-      .prepare(`
-        UPDATE group_settings
-        SET message_verification_enabled = ?, updated_at = ?
         WHERE chat_id = ?
       `)
       .bind(enabled ? 1 : 0, Math.floor(Date.now() / 1000), chatId)

@@ -30,3 +30,4 @@ dist/
 # Misc
 *.bak
 *.tmp
+wrangler.toml

@@ -10,6 +10,7 @@ export interface DbVerification {
   failure_count: number;
   message_id: number | null;
   trigger_message_id: number | null;
+  group_message_id: number | null;
   source: 'group' | 'private';
   message_verified: number; // 0 = not verified via message, 1 = verified via message
   created_at: number;
@@ -63,6 +64,20 @@ export class VerificationsRepo {
     return (result as DbVerification | null) ?? null;
   }
 
+  async getGroupVerification(chatId: string, userId: string): Promise<DbVerification | null> {
+    const result = await this.db
+      .prepare(`
+        SELECT * FROM user_verifications
+        WHERE chat_id = ? AND user_id = ? AND source = 'group'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `)
+      .bind(chatId, userId)
+      .first();
+
+    return (result as DbVerification | null) ?? null;
+  }
+
   async updateVerificationStatus(
     verificationId: string,
     status: DbVerification['status'],
@@ -106,7 +121,8 @@ export class VerificationsRepo {
     await this.db
       .prepare(`
         UPDATE user_verifications
-        SET message_id = ?, trigger_message_id = COALESCE(trigger_message_id, ?)
+        SET group_message_id = COALESCE(group_message_id, ?),
+            trigger_message_id = COALESCE(trigger_message_id, ?)
         WHERE verification_id = ?
       `)
       .bind(messageId, triggerMessageId, verificationId)
@@ -139,6 +155,17 @@ export class VerificationsRepo {
         WHERE verification_id = ?
       `)
       .bind(triggerMessageId, verificationId)
+      .run();
+  }
+
+  async setGroupMessageId(verificationId: string, groupMessageId: number): Promise<void> {
+    await this.db
+      .prepare(`
+        UPDATE user_verifications
+        SET group_message_id = ?
+        WHERE verification_id = ?
+      `)
+      .bind(groupMessageId, verificationId)
       .run();
   }
 
