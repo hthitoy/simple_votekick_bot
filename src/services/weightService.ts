@@ -7,7 +7,7 @@ export class WeightService {
 
   /**
    * Update user weight using the decay + activity formula:
-   * W_new = W_old * 0.98^d + log(1 + Δt)
+   * W_new = W_old * 0.75^d + log(1 + Δt)
    * d = days since last update
    * Δt = seconds since last message
    */
@@ -34,8 +34,8 @@ export class WeightService {
     // Δt = seconds since last message
     const secondsSinceMessage = (now - lastMessage) / 60;
 
-    // W_new = W_old * 0.98^d + log(1 + Δt)
-    const decayFactor = Math.pow(0.98, daysSinceUpdate);
+    // W_new = W_old * 0.70^d + log(1 + Δt)
+    const decayFactor = Math.pow(0.70, daysSinceUpdate);
     const activityBonus = Math.log(1 + secondsSinceMessage);
     const newWeight = Math.max(0.1, user.weight * decayFactor + activityBonus);
 
