@@ -5,11 +5,11 @@ import { DbUser } from '../types';
 export class WeightService {
   constructor(private usersRepo: UsersRepo) {}
 
-  /**
+/**
    * Update user weight using the decay + activity formula:
-   * W_new = W_old * 0.75^d + log(1 + Δt)
+   * W_new = W_old * 0.90^d + log(1 + Δt * 0.0005)
    * d = days since last update
-   * Δt = seconds since last message
+   * Δt = minutes since last message
    */
   async updateUserWeight(
     chatId: string,
@@ -34,9 +34,9 @@ export class WeightService {
     // Δt = seconds since last message
     const secondsSinceMessage = (now - lastMessage) / 60;
 
-    // W_new = W_old * 0.70^d + log(1 + Δt)
-    const decayFactor = Math.pow(0.70, daysSinceUpdate);
-    const activityBonus = Math.log(1 + secondsSinceMessage);
+    // W_new = W_old * 0.90^d + log(1 + Δt * 0.0005)
+    const decayFactor = Math.pow(0.90, daysSinceUpdate);
+    const activityBonus = Math.log(1 + secondsSinceMessage * 0.0005);
     const newWeight = Math.max(0.1, user.weight * decayFactor + activityBonus);
 
     // Update username/first_name too
