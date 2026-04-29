@@ -9,15 +9,38 @@ export class BotMessagesRepo {
     chatId: string,
     messageId: number,
     content: string | null,
+    ttlSeconds: number = 600,
+  ): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    const deleteAfter = now + ttlSeconds;
+    await this.db
+      .prepare(`
+        INSERT INTO bot_messages (chat_id, message_id, content, status, delete_after, created_at, updated_at)
+        VALUES (?, ?, ?, 'in_progress', ?, ?, ?)
+        ON CONFLICT(chat_id, message_id) DO UPDATE SET
+          content = excluded.content,
+          status = 'in_progress',
+          delete_after = excluded.delete_after,
+          updated_at = excluded.updated_at
+      `)
+      .bind(chatId, messageId, content, deleteAfter, now, now)
+      .run();
+  }
+
+  async upsertMessageNoDelete(
+    chatId: string,
+    messageId: number,
+    content: string | null,
   ): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     await this.db
       .prepare(`
-        INSERT INTO bot_messages (chat_id, message_id, content, status, created_at, updated_at)
-        VALUES (?, ?, ?, 'in_progress', ?, ?)
+        INSERT INTO bot_messages (chat_id, message_id, content, status, delete_after, created_at, updated_at)
+        VALUES (?, ?, ?, 'in_progress', NULL, ?, ?)
         ON CONFLICT(chat_id, message_id) DO UPDATE SET
           content = excluded.content,
           status = 'in_progress',
+          delete_after = NULL,
           updated_at = excluded.updated_at
       `)
       .bind(chatId, messageId, content, now, now)
@@ -48,8 +71,17 @@ export class BotMessagesRepo {
   async getInProgressBotMessages(olderThanSeconds: number): Promise<DbBotMessage[]> {
     const now = Math.floor(Date.now() / 1000);
     const result = await this.db
-      .prepare("SELECT * FROM bot_messages WHERE status = 'in_progress' AND created_at < ?")
-      .bind(now - olderThanSeconds)
+      .prepare("SELECT * FROM bot_messages WHERE status = 'in_progress' AND delete_after IS NOT NULL AND delete_after < ?")
+      .bind(now)
+      .all();
+
+    return ((result as { results?: DbBotMessage[] } | null)?.results) ?? [];
+  }
+
+  async getExpiredMessages(now: number): Promise<DbBotMessage[]> {
+    const result = await this.db
+      .prepare("SELECT * FROM bot_messages WHERE status = 'in_progress' AND delete_after IS NOT NULL AND delete_after < ?")
+      .bind(now)
       .all();
 
     return ((result as { results?: DbBotMessage[] } | null)?.results) ?? [];

@@ -11,10 +11,11 @@ export class BotMessageService {
     chatId: string,
     text: string,
     extra: Record<string, unknown> = {},
+    ttlSeconds: number = 30,
   ): Promise<{ message_id: number } | null> {
     const sent = await this.tg.sendMessage(chatId, text, extra);
     if (sent?.message_id) {
-      await this.botMessagesRepo.upsertMessage(chatId, sent.message_id, text);
+      await this.botMessagesRepo.upsertMessage(chatId, sent.message_id, text, ttlSeconds);
     }
     return sent;
   }

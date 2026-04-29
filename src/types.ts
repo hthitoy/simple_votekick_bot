@@ -118,6 +118,7 @@ export interface DbBotMessage {
   message_id: number;
   content: string | null;
   status: 'in_progress' | 'deleted';
+  delete_after: number | null;
   created_at: number;
   updated_at: number;
 }

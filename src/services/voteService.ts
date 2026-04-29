@@ -167,8 +167,8 @@ export class VoteService {
     // ── Message verification flow (首次发消息验证) ─────────────────────
     const messageVerificationEnabled = await this.isMessageVerificationEnabled(chatId);
     if (this.enableVerification && messageVerificationEnabled) {
-      const shouldVerify = await this.verificationService.shouldVerifyUser(chatId, userId);
-      if (shouldVerify) {
+      const pending = await this.verificationService.ensurePendingForMessageVerification(chatId, userId);
+      if (pending) {
         // 记录消息到 pending_deletions
         await this.pendingDeletionsRepo.create({
           chat_id: chatId,
@@ -181,7 +181,8 @@ export class VoteService {
         console.log(`[禁言] 用户: ${from.username || from.first_name} (${userId}) | 原因: 首次发消息验证`);
         await this.tg.restrictChatMember(chatId, userId);
         // 发送验证提示
-        await this.verificationService.sendVerificationPrompt(chatId, userId, msg.message_id);
+        const userDisplay = from.username ? `@${from.username}` : (from.first_name || '新成员');
+        await this.verificationService.sendVerificationPrompt(chatId, userId, msg.message_id, userDisplay);
         return; // 停止处理消息
       }
     }
@@ -362,7 +363,7 @@ export class VoteService {
     const text = this.renderService.renderVoteMessage(vote);
     const keyboard = this.renderService.buildVoteKeyboard(voteId);
 
-    const sent = await this.botMessageService.sendMessage(chatId, text, { reply_markup: keyboard });
+    const sent = await this.botMessageService.sendMessage(chatId, text, { reply_markup: keyboard }, 300);
     if (sent?.message_id) {
       await this.votesRepo.updateMessageId(voteId, sent.message_id);
     }
@@ -566,10 +567,10 @@ export class VoteService {
       await this.votesRepo.updateBotMessageId(vote.vote_id, 0);
     }
 
-    const oldBotMessages = await this.botMessagesRepo.getInProgressBotMessages(30);
-    for (const msg of oldBotMessages) {
+    const expiredMessages = await this.botMessagesRepo.getExpiredMessages(now);
+    for (const msg of expiredMessages) {
       try {
-        console.log(`[删除] 提示消息: ${msg.message_id}`);
+        console.log(`[删除] 提示消息: ${msg.message_id} (已过期)`);
         await this.tg.deleteMessage(msg.chat_id, msg.message_id);
       } catch {}
       await this.botMessagesRepo.markDeleted(msg.chat_id, msg.message_id);

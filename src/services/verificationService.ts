@@ -93,7 +93,11 @@ export class VerificationService {
       ]
     };
 
-    await this.botMessageService.sendMessage(chatId, text, { reply_markup: keyboard, parse_mode: 'HTML' });
+    const sent = await this.botMessageService.sendMessage(chatId, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 60);
+
+    if (sent?.message_id) {
+      await this.verificationsRepo.setPromptMessage(verificationId, sent.message_id, 0);
+    }
 
     console.log(`[Verification] New member joined: ${userId} in chat ${chatId}`);
   }
@@ -127,31 +131,33 @@ export class VerificationService {
   }
 
   /**
-   * 检查用户是否需要验证（第一次发送消息时）
-   * 返回 true 表示用户需要验证，应该禁言并展示验证按钮
+   * 检查用户是否有待处理的验证（首次发消息时）。
+   * 只返回已有的 pending 记录，不创建新记录。
+   * pending 由 handleNewChatMember（入群验证）负责创建。
    */
-  async shouldVerifyUser(chatId: string, userId: string): Promise<boolean> {
-    // 检查是否已被ban
+  async ensurePendingForMessageVerification(chatId: string, userId: string): Promise<DbVerification | null> {
     const isBanned = await this.verificationsRepo.isBanned(chatId, userId);
     if (isBanned) {
-      return false; // 已被ban，不处理
+      return null;
     }
 
-    // 检查是否已通过首次发消息验证（message_verified）
+    const verified = await this.verificationsRepo.getVerifiedUser(chatId, userId);
+    if (verified) {
+      return null;
+    }
+
     const messageVerified = await this.verificationsRepo.getMessageVerifiedUser(chatId, userId);
     if (messageVerified) {
-      return false; // 已通过首次发消息验证，无需再验证
+      return null;
     }
 
-    // 检查是否有待验证的记录
-    const pending = await this.verificationsRepo.getPendingVerification(chatId, userId);
-    return !!pending;
+    return await this.verificationsRepo.getPendingVerification(chatId, userId) ?? null;
   }
 
   /**
    * 发送验证提示消息
    */
-  async sendVerificationPrompt(chatId: string, userId: string, triggerMessageId: number): Promise<void> {
+  async sendVerificationPrompt(chatId: string, userId: string, triggerMessageId: number, userDisplay: string): Promise<void> {
     const pending = await this.verificationsRepo.getPendingVerification(chatId, userId);
     if (!pending) {
       return;
@@ -165,11 +171,11 @@ export class VerificationService {
       return;
     }
 
-    const text = this.renderService.renderVerificationPrompt();
+    const text = this.renderService.renderVerificationPrompt(userDisplay, userId);
     const keyboard = this.renderService.buildVerificationKeyboard(pending.verification_id);
     const expiresAt = Math.floor(Date.now() / 1000) + this.verificationDurationSeconds;
 
-    const sent = await this.botMessageService.sendMessage(chatId, text, { reply_markup: keyboard });
+    const sent = await this.botMessageService.sendMessage(chatId, text, { reply_markup: keyboard }, 60);
 
     if (sent?.message_id) {
       await this.verificationsRepo.activateVerification(
@@ -346,23 +352,39 @@ export class VerificationService {
     // 验证成功 - 入群验证
     await this.verificationsRepo.updateVerificationStatus(verificationId, 'verified', verification.message_id ?? undefined);
     // 标记为已通过首次发消息验证（入群验证后也标记，这样首次发消息就不需要再验证了）
-    await this.verificationsRepo.updateMessageVerified(verificationId, true);
-    await this.tg.answerCallbackQuery(callbackQueryId, '✅ 验证成功！');
+await this.verificationsRepo.updateMessageVerified(verificationId, true);
+await this.tg.answerCallbackQuery(callbackQueryId, '✅ 验证成功！');
 
-    // 删除私聊里的验证消息
+    // 删除群里验证消息（优先使用 source='group' 的入群验证记录）
+    let groupMessageId = verification.group_message_id;
+    if (!groupMessageId && verification.source === 'private') {
+      const groupVerif = await this.verificationsRepo.getGroupVerification(verification.chat_id, verification.user_id);
+      if (groupVerif) {
+        groupMessageId = groupVerif.group_message_id;
+      }
+    }
+    if (groupMessageId) {
+      try {
+        await this.botMessageService.deleteMessage(verification.chat_id, groupMessageId);
+      } catch (e) {
+        console.error('Failed to delete group verification message:', e);
+      }
+    }
+
+    // 删除私聊验证消息
     if (verification.message_id) {
       try {
         await this.botMessageService.deleteMessage(chatId, verification.message_id);
       } catch (e) {
-        console.error('Failed to delete verification message after success:', e);
+        console.error('Failed to delete private verification message:', e);
       }
     }
 
-    // 通知群里验证成功
+    // 通知用户验证成功（私聊发送）
     try {
-      await this.botMessageService.sendMessage(groupChatId, `✅ <b>${verification.user_id}</b> 验证成功！欢迎加入群组。`, { parse_mode: 'HTML' });
+      await this.botMessageService.sendMessage(chatId, `✅ <b>${verification.user_id}</b> 验证成功！欢迎加入群组。`, { parse_mode: 'HTML' });
     } catch (e) {
-      console.error('Failed to notify group:', e);
+      console.error('Failed to notify user:', e);
     }
 
     return true;

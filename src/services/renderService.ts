@@ -90,11 +90,12 @@ ${result}
   // 验证相关的渲染方法
   // ════════════════════════════════════════════════════════════════════════
 
-  renderVerificationPrompt(source: 'group' | 'private' = 'group'): string {
+  renderVerificationPrompt(userDisplay: string, userId: string, source: 'group' | 'private' = 'group'): string {
+    const mention = `<a href="tg://user?id=${userId}">${this.escape(userDisplay)}</a>`;
     if (source === 'private') {
-      return `🤖 <b>请在一分钟内点击下方按钮确认你是人类：</b>\n\n验证成功后自动解除群内禁言。`;
+      return `🤖 <b>${mention}，请在一分钟内点击下方按钮确认你是人类：</b>\n\n验证成功后自动解除群内禁言。`;
     }
-    return `🤖 <b>欢迎！请在一分钟内点击下方按钮确认你是人类：</b>`;
+    return `🤖 <b>${mention}，请在一分钟内点击下方按钮确认你是人类：</b>`;
   }
 
   buildVerificationKeyboard(verificationId: string, botUsername?: string) {
