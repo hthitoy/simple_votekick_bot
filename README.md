@@ -148,7 +148,7 @@ BOT_TOKEN=YOUR_BOT_TOKEN WORKER_URL=https://your-worker.workers.dev node scripts
 
 **Reputation Update Formula:**
 ```
-W_new = W_old × 0.90^Δd + log(1 + Δt * 0.0005)
+W_new = W_old × 0.90^Δd + log(1 + Δt * 0.002)
 ```
 - `Δd` = days since last update (time decay)
 - `Δt` = seconds since last message (activity bonus)

@@ -34,9 +34,9 @@ export class WeightService {
     // Δt = seconds since last message
     const secondsSinceMessage = (now - lastMessage) / 60;
 
-    // W_new = W_old * 0.90^d + log(1 + Δt * 0.0005)
+    // W_new = W_old * 0.90^d + log(1 + Δt * 0.002)
     const decayFactor = Math.pow(0.90, daysSinceUpdate);
-    const activityBonus = Math.log(1 + secondsSinceMessage * 0.0005);
+    const activityBonus = Math.log(1 + secondsSinceMessage * 0.002);
     const newWeight = Math.max(0.1, user.weight * decayFactor + activityBonus);
 
     // Update username/first_name too

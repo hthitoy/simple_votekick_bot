@@ -142,7 +142,7 @@ ${result}
    • 冷却时间：防止滥用
    • 管理员/群主无法被踢
    • 权重公式：
-  <code>Weight = Weight_old × 90%^Δd + log(1 + Δt×0.0005)</code>
+  <code>Weight = Weight_old × 90%^Δd + log(1 + Δt×0.002)</code>
   <code>Δd=为发言间隔(day)，Δt=发言间隔(min)</code>
    • 投票力：√Weight
 
