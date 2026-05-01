@@ -416,9 +416,9 @@ await this.tg.answerCallbackQuery(callbackQueryId, '✅ 验证成功！');
     // 更新验证状态为 banned
     await this.verificationsRepo.updateVerificationStatus(current.verification_id, 'banned', current.message_id ?? undefined);
     
-    // 永久禁言用户
-    await this.tg.restrictChatMember(chatId, userId, this.permanentMuteUntil);
-    console.log(`[Verification] User ${userId} permanently muted in chat ${chatId}`);
+    // 直接进行 BAN（踢出并永久禁止重新加入）
+    await this.tg.banChatMember(chatId, userId, true);
+    console.log(`[Verification] User ${userId} banned from chat ${chatId} due to verification failure`);
 
     // 静默删除验证消息
     if (current.message_id) {

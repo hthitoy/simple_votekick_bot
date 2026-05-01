@@ -335,8 +335,8 @@ export class VoteService {
     const duration = Number(this.env.VOTE_DURATION_SECONDS ?? 300);
     const baseThreshold = Number(this.env.BASE_VOTE_THRESHOLD ?? 20);
     const targetWeight = await this.weightService.getUserWeight(chatId, targetId);
-    // 新阈值公式：40 * (1 + sqrt(weight) / 5)
-    const threshold = Math.round(40 * (1 + Math.sqrt(targetWeight) / 5));
+    // 新阈值公式：20 * (1 + sqrt(weight) / 5)
+    const threshold = Math.round(20 * (1 + Math.sqrt(targetWeight) / 5));
     const expiresAt = now + duration;
 
     await this.votesRepo.createVote({
