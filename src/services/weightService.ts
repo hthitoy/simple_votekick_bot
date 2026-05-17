@@ -7,9 +7,10 @@ export class WeightService {
 
 /**
    * Update user weight using the decay + activity formula:
-   * W_new = W_old * 0.90^d + log(1 + Δt * 0.0005)
+   * W_new = W_old * 0.90^d + log(1 + Δt * 0.002)
    * d = days since last update
    * Δt = minutes since last message
+   * 注意：首次发消息时权重直接设为 1.0
    */
   async updateUserWeight(
     chatId: string,
@@ -25,7 +26,14 @@ export class WeightService {
       return user;
     }
 
-    const lastUpdate = user.last_weight_update_at ?? user.joined_at;
+    // 首次发消息，权重直接设为 1.0，不使用公式计算
+    if (!user.last_weight_update_at) {
+      await this.usersRepo.upsertUser(chatId, userId, username, firstName);
+      await this.usersRepo.updateWeight(chatId, userId, 1.0, now);
+      return (await this.usersRepo.getUser(chatId, userId))!;
+    }
+
+    const lastUpdate = user.last_weight_update_at;
     const lastMessage = user.last_message_at ?? user.joined_at;
 
     // d = days since last weight update
