@@ -295,11 +295,6 @@ export class VoteService {
     const target = replyMsg.from;
     const targetId = String(target.id);
 
-    if (target.is_bot) {
-      await this.reply(chatId, '❌ 不能投机器人');
-      return;
-    }
-
     if (targetId === initiatorId) {
       await this.reply(chatId, '❌ 不能投自己');
       return;
