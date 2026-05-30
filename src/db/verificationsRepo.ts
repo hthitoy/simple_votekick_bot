@@ -182,7 +182,7 @@ export class VerificationsRepo {
       .prepare(`
         SELECT * FROM user_verifications
         WHERE status = 'pending'
-          AND message_id IS NOT NULL
+          AND expires_at > 0
           AND expires_at < ?
       `)
       .bind(now)
