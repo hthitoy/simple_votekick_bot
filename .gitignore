@@ -31,3 +31,8 @@ dist/
 *.bak
 *.tmp
 wrangler.toml
+
+# Personal files
+IN Mock Exam*
+*.html
+biome.json
