@@ -179,7 +179,7 @@ export class VoteService {
         });
         // 禁言用户
         console.log(`[禁言] 用户: ${from.username || from.first_name} (${userId}) | 原因: 首次发消息验证`);
-        await this.tg.restrictChatMember(chatId, userId);
+        await this.tg.restrictChatMember(chatId, userId, 0);
         // 发送验证提示
         const userDisplay = from.username ? `@${from.username}` : (from.first_name || '新成员');
         await this.verificationService.sendVerificationPrompt(chatId, userId, msg.message_id, userDisplay);
@@ -526,7 +526,7 @@ export class VoteService {
     try {
       await this.tg.kickChatMember(vote.chat_id, vote.target_user_id);
       await this.tg.unbanChatMember(vote.chat_id, vote.target_user_id);
-      await this.tg.restrictChatMember(vote.chat_id, vote.target_user_id, Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60);
+      await this.tg.restrictChatMember(vote.chat_id, vote.target_user_id, 0);
       console.log(`[禁言] 目标: ${vote.target_username || vote.target_first_name || vote.target_user_id} | 原因: 投票踢出 | 期限: 永久`);
     } catch (e) {
       console.error('[踢出] 失败:', e);

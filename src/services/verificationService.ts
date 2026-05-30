@@ -45,7 +45,7 @@ export class VerificationService {
     void firstName;
 
     if (await this.verificationsRepo.isBanned(chatId, userId)) {
-      await this.tg.restrictChatMember(chatId, userId, this.permanentMuteUntil);
+      await this.tg.banChatMember(chatId, userId, true);
       return;
     }
 
@@ -66,14 +66,16 @@ export class VerificationService {
       return;
     }
 
-    // 创建待验证记录
+    const now = Math.floor(Date.now() / 1000);
+
+    // 创建待验证记录（1分钟后过期）
     const verificationId = generateVerificationId();
-    const expiresAt = 0;
+    const expiresAt = now + 60;
 
     await this.verificationsRepo.createVerification(chatId, userId, verificationId, expiresAt, 'group');
 
-    // 禁言新成员
-    await this.tg.restrictChatMember(chatId, userId, Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60);
+    // 永久禁言新成员
+    await this.tg.restrictChatMember(chatId, userId, 0);
     console.log(`[禁言] 用户: ${userId} | 原因: 新成员验证`);
 
     // 发送带 deep link 的验证提示到群里
