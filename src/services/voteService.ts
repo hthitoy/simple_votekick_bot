@@ -32,7 +32,9 @@ export class VoteService {
   private botMessageService: BotMessageService;
   private botMessagesRepo: BotMessagesRepo;
   private pendingDeletionsRepo: PendingDeletionsRepo;
+  private groupSettingsRepo: GroupSettingsRepo;
   private enableVerification: boolean;
+  private settingsCache: Map<string, any> = new Map();
 
   constructor(
     private db: D1Database,
@@ -56,23 +58,31 @@ export class VoteService {
 
   // ── Helpers ──────────────────────────────────────────────────────
 
+  private async getSettings(chatId: string): Promise<any> {
+    if (!this.settingsCache.has(chatId)) {
+      const settings = await this.groupSettingsRepo.getSettings(chatId);
+      this.settingsCache.set(chatId, settings);
+    }
+    return this.settingsCache.get(chatId);
+  }
+
   private async isVoteKickEnabled(chatId: string): Promise<boolean> {
-    const settings = await this.groupSettingsRepo.getSettings(chatId);
+    const settings = await this.getSettings(chatId);
     return settings ? settings.vote_kick_enabled === 1 : true; // default enabled
   }
 
   private async isVerificationEnabled(chatId: string): Promise<boolean> {
-    const settings = await this.groupSettingsRepo.getSettings(chatId);
+    const settings = await this.getSettings(chatId);
     return settings ? settings.verification_enabled === 1 : true; // default enabled (入群验证)
   }
 
   private async isMessageVerificationEnabled(chatId: string): Promise<boolean> {
-    const settings = await this.groupSettingsRepo.getSettings(chatId);
+    const settings = await this.getSettings(chatId);
     return settings ? settings.message_verification_enabled === 1 : true; // default enabled (首次发消息验证)
   }
 
   private async isAutoCleanupEnabled(chatId: string): Promise<boolean> {
-    const settings = await this.groupSettingsRepo.getSettings(chatId);
+    const settings = await this.getSettings(chatId);
     return settings ? settings.auto_cleanup_enabled === 1 : true; // default enabled
   }
 
@@ -187,8 +197,8 @@ export class VoteService {
       }
     }
 
-    // Always update weight on every message
-    await this.weightService.updateUserWeight(chatId, userId, from.username ?? null, from.first_name);
+    // 更新权重（后台异步，不阻塞响应）
+    void this.weightService.updateUserWeight(chatId, userId, from.username ?? null, from.first_name);
 
     const isKick = rawText.startsWith('/kick') || (rawText.includes('kick') && rawText.length < 50);
 
