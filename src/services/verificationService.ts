@@ -88,7 +88,8 @@ export class VerificationService {
       userDisplay = '新用户';
     }
     
-    const text = `🤖 <b>新成员验证：</b> ${userDisplay} (ID: ${userId})\n请点击下方按钮添加机器人进行验证`;
+    const mention = `<a href="tg://user?id=${userId}">${userDisplay}</a>`;
+    const text = `🤖 <b>新成员验证：</b> ${mention} (ID: ${userId})\n请点击下方按钮添加机器人进行验证`;
     const keyboard = {
       inline_keyboard: [
         [{ text: '🤖 点击此处添加机器人验证', url: `https://t.me/${this.botUsername}?start=verify_${verificationId}` }]
