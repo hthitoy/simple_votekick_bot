@@ -200,9 +200,9 @@ export class VoteService {
     // 更新权重（后台异步，不阻塞响应）
     void this.weightService.updateUserWeight(chatId, userId, from.username ?? null, from.first_name);
 
-    const isKick = rawText.startsWith('/kick') || (rawText.includes('kick') && rawText.length < 50);
+    const isVoteCommand = rawText === '/kick' || rawText === '/vote' || rawText === 'kick' || rawText === 'vote';
 
-    if (!isKick) return;
+    if (!isVoteCommand) return;
 
     // Check if vote kick is enabled for this group
     const voteKickEnabled = await this.isVoteKickEnabled(chatId);
