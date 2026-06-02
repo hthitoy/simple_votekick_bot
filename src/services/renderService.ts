@@ -153,6 +153,24 @@ ${result}
     );
   }
 
+  renderGroupHelp(botUsername: string): string {
+    return (
+`🤖 <b>VoteKick 使用方法</b>
+
+1️⃣ <b>发起投票踢人：</b>
+   • 回复目标消息 + <code>/kick</code>
+
+2️⃣ <b>参与投票：</b>
+   • 点击 ⬆️ 踢出 / ⬇️ 不踢出
+
+3️⃣ <b>查询权重：</b>
+   • <code>/weight@${botUsername}</code>
+
+4️⃣ <b>查看详细帮助：</b>
+   • 私聊发送 <code>/help</code>`
+    );
+  }
+
   renderWeightMessage(displayName: string, username: string | undefined, weight: number, threshold: number): string {
     const mention = username ? `@${username}` : displayName;
     return (

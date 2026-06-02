@@ -8,21 +8,29 @@ async function processUpdate(update: TelegramUpdate, env: Env): Promise<void> {
   const tg = new TelegramAPI(env.BOT_TOKEN);
   const service = new VoteService(env.DB, tg, env);
 
-  // Handle message updates
-  if (update.message) {
-    // Handle private chat commands
-    if (update.message.chat?.type === 'private') {
+    // Handle message updates
+    if (update.message) {
       const text = update.message.text || '';
-      if (text.startsWith('/start') || text.startsWith('/verify')) {
-        await service.handlePrivateStart(update.message.from?.id.toString() || '', update.message.message_id);
-      } else if (text.startsWith('/help')) {
-        await service.sendHelpMessage(update.message.chat.id.toString());
+      const botUsername = env.BOT_USERNAME || '';
+      
+      // Handle group help command (/help@botname)
+      if (update.message.chat?.type !== 'private' && text === `/help@${botUsername}`) {
+        await service.handleGroupHelp(update.message);
+        return;
       }
+      
+      // Handle private chat commands
+      if (update.message.chat?.type === 'private') {
+        if (text.startsWith('/start') || text.startsWith('/verify')) {
+          await service.handlePrivateStart(update.message.from?.id.toString() || '', update.message.message_id);
+        } else if (text.startsWith('/help')) {
+          await service.sendHelpMessage(update.message.chat.id.toString());
+        }
+      }
+      
+      // Handle regular messages
+      await service.handleMessage(update.message);
     }
-    
-    // Handle regular messages
-    await service.handleMessage(update.message);
-  }
   // Handle callback queries (button clicks)
   else if (update.callback_query) {
     await service.handleCallback(update.callback_query);

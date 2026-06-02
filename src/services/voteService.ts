@@ -139,6 +139,26 @@ export class VoteService {
     }
   }
 
+  async handleGroupHelp(msg: TelegramMessage): Promise<void> {
+    const chatId = String(msg.chat.id);
+    const botUsername = this.env.BOT_USERNAME || '';
+
+    // 删除用户的 help 命令消息
+    try {
+      await this.tg.deleteMessage(chatId, msg.message_id);
+    } catch (e) {
+      console.error('Failed to delete group help command:', e);
+    }
+
+    // 发送简化版帮助（30秒后自动删除）
+    const helpText = this.renderService.renderGroupHelp(botUsername);
+    try {
+      await this.botMessageService.sendMessage(chatId, helpText, { parse_mode: 'HTML' }, 30);
+    } catch (e) {
+      console.error('Failed to send group help message:', e);
+    }
+  }
+
   async handleMessage(msg: TelegramMessage): Promise<void> {
     const chatType = msg.chat.type;
 
@@ -164,13 +184,6 @@ export class VoteService {
     // 日志: 收到消息
     const msgPreview = msg.text ? msg.text.slice(0, 50) : '(无文字)';
     console.log(`[消息] 群: ${chat.title || 'Unknown'} (${chatId}) | 用户: ${from.username || from.first_name || 'Unknown'} (${userId}) | 内容: ${msgPreview}`);
-
-    // ── Handle /start in private chat ────────────────────────────────────
-    if (chat.type === 'private' && rawText.startsWith('/start')) {
-      const guide = this.renderService.renderStartGuide();
-      await this.botMessageService.sendMessage(chatId, guide);
-      return;
-    }
 
     if (chat.type === 'private') return;
 
