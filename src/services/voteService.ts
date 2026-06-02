@@ -201,6 +201,12 @@ export class VoteService {
     void this.weightService.updateUserWeight(chatId, userId, from.username ?? null, from.first_name);
 
     const isVoteCommand = rawText === '/kick' || rawText === '/vote' || rawText === 'kick' || rawText === 'vote';
+    const isWeightCommand = rawText === `/weight@${this.env.BOT_USERNAME}` || rawText === `/w@${this.env.BOT_USERNAME}`;
+
+    if (isWeightCommand) {
+      await this.handleWeightQuery(msg);
+      return;
+    }
 
     if (!isVoteCommand) return;
 
@@ -212,6 +218,30 @@ export class VoteService {
 
     const replyMsg = msg.reply_to_message ?? null;
     await this.initiateVote(msg, replyMsg);
+  }
+
+  /**
+   * 处理权重查询命令 /weight@botname
+   */
+  private async handleWeightQuery(msg: TelegramMessage): Promise<void> {
+    const chatId = String(msg.chat.id);
+    const from = msg.from;
+    if (!from) return;
+
+    // 有回复消息查目标，没回复查自己
+    const target = msg.reply_to_message?.from ?? from;
+    const targetId = String(target.id);
+    const weight = await this.weightService.getUserWeight(chatId, targetId);
+    const threshold = Math.round(20 * (1 + weight / 20));
+
+    const text = this.renderService.renderWeightMessage(
+      target.first_name || '用户',
+      target.username,
+      weight,
+      threshold
+    );
+
+    await this.botMessageService.sendMessage(chatId, text, { parse_mode: 'HTML' });
   }
 
   /**
@@ -321,6 +351,12 @@ export class VoteService {
     const existing = await this.votesRepo.getActiveVoteForTarget(chatId, targetId);
     if (existing) {
       await this.reply(chatId, '❌ 已有进行中的投票');
+      // 删除用户的 kick 消息
+      try {
+        await this.tg.deleteMessage(chatId, msg.message_id);
+      } catch (e) {
+        console.error('Failed to delete initiator kick message:', e);
+      }
       return;
     }
 

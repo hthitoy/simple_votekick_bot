@@ -151,6 +151,18 @@ ${result}
     );
   }
 
+  renderWeightMessage(displayName: string, username: string | undefined, weight: number, threshold: number): string {
+    const mention = username ? `@${username}` : displayName;
+    return (
+`⚖️ <b>用户权重信息</b>
+
+👤 <b>目标：</b>${this.escape(mention)}
+📊 <b>权重：</b>${weight.toFixed(2)}
+💪 <b>投票力：</b>${weight.toFixed(2)}
+🎯 <b>被踢阈值：</b>${threshold}`
+    );
+  }
+
   private escape(text: string): string {
     return text
       .replace(/&/g, '&amp;')
