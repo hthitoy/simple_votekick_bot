@@ -200,8 +200,10 @@ export class VoteService {
     // 更新权重（后台异步，不阻塞响应）
     void this.weightService.updateUserWeight(chatId, userId, from.username ?? null, from.first_name);
 
-    const isVoteCommand = rawText === '/kick' || rawText === '/vote' || rawText === 'kick' || rawText === 'vote';
-    const isWeightCommand = rawText === `/weight@${this.env.BOT_USERNAME}` || rawText === `/w@${this.env.BOT_USERNAME}`;
+    const botUsername = this.env.BOT_USERNAME || '';
+    const isVoteCommand = rawText === '/kick' || rawText === '/vote' || rawText === 'kick' || rawText === 'vote' ||
+                          (botUsername && (rawText === `/kick@${botUsername}` || rawText === `/vote@${botUsername}`));
+    const isWeightCommand = rawText === `/weight@${botUsername}` || rawText === `/w@${botUsername}`;
 
     if (isWeightCommand) {
       await this.handleWeightQuery(msg);
@@ -242,6 +244,13 @@ export class VoteService {
     );
 
     await this.botMessageService.sendMessage(chatId, text, { parse_mode: 'HTML' });
+
+    // 删除用户的 weight 命令消息
+    try {
+      await this.tg.deleteMessage(chatId, msg.message_id);
+    } catch (e) {
+      console.error('Failed to delete weight command message:', e);
+    }
   }
 
   /**
