@@ -305,7 +305,8 @@ export class VoteService {
     const chat = msg.chat;
 
     // Check if vote kick is enabled for this group
-    const voteKickEnabled = await this.isVoteKickEnabled(chat.id);
+    const chatId = String(chat.id);
+    const voteKickEnabled = await this.isVoteKickEnabled(chatId);
     if (!voteKickEnabled) {
       // Vote kick is disabled for this group, ignore the command
       return;
@@ -316,7 +317,6 @@ export class VoteService {
       return;
     }
 
-    const chatId = String(chat.id);
     const initiatorId = String(from.id);
     const now = Math.floor(Date.now() / 1000);
 
@@ -404,6 +404,7 @@ export class VoteService {
       status: 'active',
       quoted_text: replyMsg.text ?? null,
       message_id: null,
+      bot_message_id: null,
       expires_at: expiresAt,
     });
 

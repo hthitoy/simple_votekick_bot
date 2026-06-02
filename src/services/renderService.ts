@@ -21,10 +21,10 @@ export class RenderService {
     const durationMin = Math.round((vote.expires_at - vote.created_at) / 60);
 
     return (
-`🗳 VoteKick ${target}${quoted}
-📊 投票倾向：${bar}
+`VoteKick ${target}${quoted}
+投票倾向:${bar}
 ⬆️ ${vote.yes_weight.toFixed(1)}  ⬇️ ${vote.no_weight.toFixed(1)}  ⚖️ ${net >= 0 ? '+' : ''}${net.toFixed(1)}
-⏳ 有效：${durationMin}分钟  🎯 阈值：${vote.threshold}`
+有效：${durationMin}分钟  阈值：${vote.threshold}`
     );
   }
 
@@ -154,12 +154,9 @@ ${result}
   renderWeightMessage(displayName: string, username: string | undefined, weight: number, threshold: number): string {
     const mention = username ? `@${username}` : displayName;
     return (
-`⚖️ <b>用户权重信息</b>
-
-👤 <b>目标：</b>${this.escape(mention)}
-📊 <b>权重：</b>${weight.toFixed(2)}
-💪 <b>投票力：</b>${weight.toFixed(2)}
-🎯 <b>被踢阈值：</b>${threshold}`
+`<b>目标: </b>${this.escape(mention)}
+<b>投票权：</b>${weight.toFixed(2)}
+<b>被踢阈值：</b>${threshold}`
     );
   }
 
