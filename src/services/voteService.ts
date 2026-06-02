@@ -298,6 +298,16 @@ export class VoteService {
     );
   }
 
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
+  private async deleteKickMessage(chatId: string, messageId: number): Promise<void> {
+    try {
+      await this.tg.deleteMessage(chatId, messageId);
+    } catch (e) {
+      console.error('Failed to delete initiator kick message:', e);
+    }
+  }
+
   // ── Initiate vote ────────────────────────────────────────────────────────
 
   async initiateVote(msg: TelegramMessage, replyMsg: any): Promise<void> {
@@ -309,11 +319,13 @@ export class VoteService {
     const voteKickEnabled = await this.isVoteKickEnabled(chatId);
     if (!voteKickEnabled) {
       // Vote kick is disabled for this group, ignore the command
+      await this.deleteKickMessage(chatId, msg.message_id);
       return;
     }
 
     if (!from || !replyMsg?.from) {
       // 无效请求直接无视不报错
+      await this.deleteKickMessage(chatId, msg.message_id);
       return;
     }
 
@@ -327,6 +339,7 @@ export class VoteService {
         chatId,
         `❌ 你的信誉权重不足（当前 ${initiatorWeight.toFixed(2)}，需要 ${this.minWeightToInitiate}），无法发起投票`,
       );
+      await this.deleteKickMessage(chatId, msg.message_id);
       return;
     }
 
@@ -337,6 +350,7 @@ export class VoteService {
       const remaining = this.initiatorCooldown - elapsed;
       if (remaining > 0) {
         await this.reply(chatId, `❌ 发起冷却中，请等待 ${remaining} 秒`);
+        await this.deleteKickMessage(chatId, msg.message_id);
         return;
       }
     }
@@ -346,6 +360,7 @@ export class VoteService {
 
     if (targetId === initiatorId) {
       await this.reply(chatId, '❌ 不能投自己');
+      await this.deleteKickMessage(chatId, msg.message_id);
       return;
     }
 
@@ -353,6 +368,7 @@ export class VoteService {
     const member = await this.tg.getChatMember(chatId, targetId);
     if (member && (member.status === 'administrator' || member.status === 'creator')) {
       await this.reply(chatId, '❌ 不能投管理员');
+      await this.deleteKickMessage(chatId, msg.message_id);
       return;
     }
 
@@ -360,12 +376,7 @@ export class VoteService {
     const existing = await this.votesRepo.getActiveVoteForTarget(chatId, targetId);
     if (existing) {
       await this.reply(chatId, '❌ 已有进行中的投票');
-      // 删除用户的 kick 消息
-      try {
-        await this.tg.deleteMessage(chatId, msg.message_id);
-      } catch (e) {
-        console.error('Failed to delete initiator kick message:', e);
-      }
+      await this.deleteKickMessage(chatId, msg.message_id);
       return;
     }
 
@@ -376,6 +387,7 @@ export class VoteService {
       const remaining = this.targetCooldown - elapsed;
       if (remaining > 0) {
         await this.reply(chatId, `❌ 该用户冷却中，请等待 ${remaining} 秒`);
+        await this.deleteKickMessage(chatId, msg.message_id);
         return;
       }
     }
