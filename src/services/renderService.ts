@@ -142,12 +142,15 @@ ${result}
   权重系统：活跃成员投票力更大
   冷却时间：防止滥用(管理员/群主无法被踢)
   权重公式：
-  <code>Weight = Weight_old×90%^Δd+log(1+Δt×0.002)</code>
-  <code>Δd=为发言间隔(day),Δt=发言间隔(min)</code>
+    <code>W_new=W_old×0.90^Δd+log(1+Δt×0.002)</code>
+    <code>Δd=为发言间隔(day)</code>
+    <code>Δt=发言间隔(min)</code>
+    <code>W=权重(min)</code>
   投票力: Weight
-  踢出阈值：<code>Threshold=20×(1+Weight/10)</code>
+  踢出阈值:
+    <code>Threshold=20×(1+Weight/10)</code>
 
-有问题？请联系群管理员。
+有问题? 请联系,群管理员
   反馈群：@simplevotekick`
     );
   }
