@@ -144,7 +144,9 @@ ${result}
    • 权重公式：
   <code>Weight = Weight_old × 90%^Δd + log(1 + Δt×0.002)</code>
   <code>Δd=为发言间隔(day)，Δt=发言间隔(min)</code>
-   • 投票力：√Weight
+   • 投票力：Weight
+   • 踢出阈值：
+  <code>Threshold = 20 × (1 + Weight / 10)</code>
 
 ❓ 有问题？请联系群管理员。
 反馈群：@simplevotekick`

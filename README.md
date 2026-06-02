@@ -160,7 +160,7 @@ vote_power = W
 
 **Dynamic Threshold:**
 ```
-threshold = 20 × (1 + W / 20)
+threshold = 20 × (1 + W / 10)
 ```
 
 ---
