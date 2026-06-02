@@ -126,26 +126,26 @@ ${result}
 
   renderStartGuide(): string {
     return (
-`👋 <b>欢迎使用 VoteKick Bot</b>
+` <b>欢迎使用 VoteKick Bot</b>
 
 🗳 <b>使用方法：</b>
 
-1️⃣ <b>发起投票：</b>
-   • 回复目标消息并带上 <code>/kick</code> 命令
+1. <b>发起投票：</b>
+    - 回复目标消息并带上 <code>/kick</code> 命令
 
-2️⃣ <b>群成员投票：</b>
-   • 点击 ⬆️ 踢出 或 ⬇️ 不踢出
-   • 赞成票力达到阈值后自动踢人
-
-⚙️ <b>系统规则：</b>
-   • 权重系统：活跃成员投票力更大
-   • 冷却时间：防止滥用
-   • 管理员/群主无法被踢
-   • 权重公式：
+2. <b>群成员投票：</b>
+    - 点击 ⬆️ 踢出 或 ⬇️ 不踢出
+    - 赞成票力达到阈值后自动踢人
+      
+3. <b>系统规则：</b>
+    - 权重系统：活跃成员投票力更大
+    - 冷却时间：防止滥用
+    - 管理员/群主无法被踢
+    - 权重公式：
   <code>Weight = Weight_old × 90%^Δd + log(1 + Δt×0.002)</code>
   <code>Δd=为发言间隔(day)，Δt=发言间隔(min)</code>
-   • 投票力：Weight
-   • 踢出阈值：
+    - 投票力：Weight
+    - 踢出阈值：
   <code>Threshold = 20 × (1 + Weight / 10)</code>
 
 ❓ 有问题？请联系群管理员。
@@ -155,19 +155,15 @@ ${result}
 
   renderGroupHelp(botUsername: string): string {
     return (
-`🤖 <b>VoteKick 使用方法</b>
-
-1️⃣ <b>发起投票踢人：</b>
-   • 回复目标消息 + <code>/kick</code>
-
-2️⃣ <b>参与投票：</b>
-   • 点击 ⬆️ 踢出 / ⬇️ 不踢出
-
-3️⃣ <b>查询权重：</b>
-   • <code>/weight@${botUsername}</code>
-
-4️⃣ <b>查看详细帮助：</b>
-   • 私聊发送 <code>/help</code>`
+`<b>VoteKick 使用方法</b>
+1.<b>发起投票踢人：</b>
+    -回复目标消息 + <code>/kick</code>
+2.<b>参与投票：</b>
+    -点击 ⬆️ 踢出 / ⬇️ 不踢出
+3.<b>查询权重：</b>
+    -<code>/weight@${botUsername}</code>
+4.<b>查看详细帮助：</b>
+    -私聊发送 <code>/help</code>`
     );
   }
 
